@@ -13,7 +13,6 @@
 #include <malloc.h>
 #include <pthread.h>
 #include "job_table.h"
-#include "scif.h"
 
 extern char * prefijo_fichero_temporal; // La necesito de controller.h
 static pthread_mutex_t host_comm_mutex;
@@ -166,6 +165,7 @@ static pthread_t * ultimo_hilo_no_liberado = NULL;
  	tabla_trabajos[x][y].fragmento_vertical=fragmento_columna;
  }
 
+ /*
  static const int PUERTO = 9070;
  static const int NODO_HOST = 0;
  static const int LONG_BUFFER = 64 * 1024;
@@ -173,127 +173,10 @@ static pthread_t * ultimo_hilo_no_liberado = NULL;
  static const int TRANSFER_DONE_FLAG = 1;
  static const int ERROR_RESULT = -1;
  static const int SLEEP_MICROSECONDS = 250000;
+*/
 
- // Esta funci󮠰rocede de https://software.intel.com/en-us/forums/topic/530366
- static void* allocRegisteredMem(scif_epd_t endpoint, size_t num_bytes) {
- 	// allocate message buffer (registered memory)
- 	void *ptr;
- 	int result;
- 	ptr = memalign(PAGE_SIZE, num_bytes);
- 	if (ptr == NULL) {
- 		fprintf(stderr, "failed to allocate message buffer (posix_memalign)\n");
- 		exit(EXIT_FAILURE);
- 	}
 
- 	// clear message buffer
- 	memset(ptr, 0, num_bytes);
 
- 	// register message buffer memory
- 	result = scif_register(endpoint, ptr, num_bytes,
- 			(off_t)ptr, SCIF_PROT_READ|SCIF_PROT_WRITE,
- 			SCIF_MAP_FIXED);
- 	if (result == SCIF_REGISTER_FAILED) {
- 		fprintf(stderr, "scif_register() failed");
- 		exit(EXIT_FAILURE);
- 	}
-
- 	return ptr;
- }
-
- // Salva una fila completa de la tabla de trabajos enviᮤola al host por SCIF.
- void salvarFila(struct Nodo_trabajo ** tablaTrabajos, int y, int tabla_trabajos_MAX_X, int cierra_conexion){
-	int i;
-	int32_t ok;
-	static scif_epd_t mi_end_point_final;
-	static void* reg_mem = NULL;
-	int longitud, offset;
-	const int CONTINUAR = 0;
-	const int ACABAR = 1;
-	if (reg_mem == NULL) {
-		// Hay que iniciar los canales de comunicaci󮊉	int tam_buffer;
-		struct scif_portID mi_peer;
-		int bytes_enviados;
-		int bytes_recibidos;
-
-		mi_end_point_final = scif_open();
-		if (mi_end_point_final == SCIF_OPEN_FAILED){
-			fprintf(stderr, "Error irrecuperable: no puede abrirse el endpoint.\n");
-			return;
-		}
-
-		mi_peer.node = NODO_HOST;
-		mi_peer.port = PUERTO;
-		// Quiz᳠esto deba ser un bucle de conexi󮠨ver documentaci󮠤e la funci󮠳cif_connect).
-		ok = scif_connect(mi_end_point_final, &mi_peer);
-		if (ok == ERROR_RESULT){
-			fprintf(stderr, "Error irrecuperable: problema al conectarse al nodo %d puerto %d. Errno: %d\n", mi_peer.node, mi_peer.port, errno);
-			return;
-		}
-		// Ubica y registra memoria para transferencias RMA
-		// Lo siguiente es el tama񯠣orrecto.
-		tam_buffer = sizeof(struct Nodo_valor) * (tablaTrabajos[0][y].fragmento_horizontal->longitud +
-												  tablaTrabajos[0][y].fragmento_vertical->longitud)
-				   + sizeof(int) * 2;
-		// Lo siguiente es para cortar por lo sano.
-		tam_buffer = LONG_BUFFER;
-		reg_mem = allocRegisteredMem(mi_end_point_final, tam_buffer);
-		// Env�la direcci󮠬ocal al host
-		bytes_enviados = scif_send(mi_end_point_final, &reg_mem, sizeof(void *), SCIF_SEND_BLOCK);
-		if (bytes_enviados < sizeof(void *)) {
-			fprintf(stderr, "Error irrecuperable: problema al hacer scif_send().\n");
-			return;
-		}
-	}
-	for(i=0; i<tabla_trabajos_MAX_X; i++){
-		offset = 0;
-
- 		longitud=tablaTrabajos[i][y].fragmento_horizontal->longitud;
-		memcpy(reg_mem+offset, &longitud, sizeof(longitud));
-		offset += sizeof(longitud);
-
-		memcpy(reg_mem+offset, tablaTrabajos[i][y].fragmento_horizontal->contenido, longitud*sizeof(struct Nodo_valor));
-		offset += longitud*sizeof(struct Nodo_valor);
-
- 		longitud=tablaTrabajos[i][y].fragmento_vertical->longitud;
-		memcpy(reg_mem+offset, &longitud, sizeof(longitud));
-		offset += sizeof(longitud);
-
-		memcpy(reg_mem+offset, tablaTrabajos[i][y].fragmento_vertical->contenido, longitud*sizeof(struct Nodo_valor));
-		offset += longitud*sizeof(struct Nodo_valor);
-
-		ok = CONTINUAR;
-		// Env�se񡬠de que los datos pueden recogerse
-		scif_send(mi_end_point_final, (void *)&ok, sizeof(ok), SCIF_SEND_BLOCK);
-
-		// Espera se񡬠bloqueante de que los datos se han recogido.
-		scif_recv(mi_end_point_final, &ok, sizeof(ok), SCIF_RECV_BLOCK);
-
-		// Los datos ya se han enviado y la memoria puede liberarse.
- 		libera_fragmento(&(tablaTrabajos[i][y].fragmento_horizontal));
- 		libera_fragmento(&(tablaTrabajos[i][y].fragmento_vertical));
- 		tablaTrabajos[i][y].fragmento_horizontal = NULL;
- 		tablaTrabajos[i][y].fragmento_vertical = NULL;
-	}
-	if (cierra_conexion){
-		// Esto tambi鮠desregistra.
-		// Env�se񡬠de que la comunicaci󮠨a acabado.
-		ok = ACABAR;
-		scif_send(mi_end_point_final, (void *)&ok, sizeof(ok), SCIF_SEND_BLOCK);
-		scif_close(mi_end_point_final);
-		if (reg_mem != NULL)
-			free(reg_mem);
-		reg_mem = NULL;
-	}
-
-	// printf("Row saved %d\n", y);
-
-	if (TRAZA) {
-		printf("%08ld,F,%d,%d\n", my_clock()/CLOCKS_PER_CENTSEC, y, y);
-	}
- }
-
-/*
-//  Estᠣomentada porque este desarrollo env�los datos por SCIF y no los guarda en un fichero.
 // Salva una fila completa de la tabla de trabajos en un fichero del tipo nombreTile1, nombreTile2, etc. donde Y es el numero de fila.
  void salvarFila(struct Nodo_trabajo ** tablaTrabajos, int y, int tabla_trabajos_MAX_X, int dummy_cierra_conexion){
  	int i, longitud;
@@ -326,7 +209,7 @@ static pthread_t * ultimo_hilo_no_liberado = NULL;
 		printf("%08ld,F,%d,%d\n", my_clock()/CLOCKS_PER_CENTSEC, y, y);
 	}
  }
-*/
+
 
 #pragma GCC diagnostic ignored "-Wunused-result"
 /** Recupera una fila completa de la tabla de trabajos a partir de un fichero del tipo nombreTile1, nombreTile2, etc. donde Y es el número de fila. */

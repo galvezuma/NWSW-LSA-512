@@ -10,7 +10,7 @@
 
 
 #include "job_fragment.h"
-#include "MC64-NWSW_controller.h"
+#include "NWSW_LSA_512_controller.h"
 
 /* Módulo de manipulación y tratamiento de la tabla de trabajos del sistema, de dimensiones:
  * [floor(long.sec A / SIZE_SUBTRABAJO_H), floor(long.secB % SIZE_SUBTRABAJO_V)]

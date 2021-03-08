@@ -10,6 +10,8 @@
 #include <limits.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <stdint.h>
+#include <immintrin.h>
 #include "MyLib.h"
 #include "definitions.h"
 
@@ -47,5 +49,12 @@ void mylib_wait_proc_vanishes(pthread_t * set, int num_hilos){
 		printf("Proceso %d finalizado\n", i);
 	}
 	free(set);
+}
+
+// Functions for AVX512
+inline int my_mm512_extract_epi32(__m512i v, int pos) {
+	int32_t address[16] __attribute__((aligned (64)));
+	_mm512_store_epi32 (&address, v);
+	return v[pos];
 }
 

@@ -7,10 +7,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "MyLib.h"
 #include <string.h>
 #include <time.h>
 #include <immintrin.h>
+#include "MyLib.h"
 #include "job_fragment.h"
 #include "alphabet.h"
 
@@ -335,7 +335,7 @@ void vectorizacionColumnas(	estado_del_Objeto * Obj,
 		contenidoSubColumnaTrabajo[y+2 - int_per_simdreg].vertical = _mm_extract_epi32(r_max_vertical, 3);
 		contenidoSubColumnaTrabajo[y+2 - int_per_simdreg].horizontal = _mm_extract_epi32(r_max_horizontal, 3);
 
-		//*****************************************************************************************
+		// *****************************************************************************************
 		//HASTA AQUI HECHO, (es hasta donde habia q llegar)
 
 #ifdef DEBUG_VECTOR
@@ -677,10 +677,14 @@ void realiza_procesamiento_columnas(estado_del_Objeto * Obj) {
 	#endif
 
 	// Traducimos las letras para ir más rápidos
+		// Inhabilitamos temporalmente el mensaje de advertencia: array subscript has type ‘char’
+#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wchar-subscripts"
 	for(int i=0; i < size_subfila_partida; i++)
 		Obj->secuencia_horizontal[i] = Obj->tabla_puntuacion->codificacion_horizontal[Obj->secuencia_horizontal[i]];
 	for(int j=0; j < size_subcolumna_partida; j++)
 		Obj->secuencia_vertical[j] = Obj->tabla_puntuacion->codificacion_vertical[Obj->secuencia_vertical[j]];
+#pragma GCC diagnostic pop
 
 	// Creamos los fragmentos de trabajo en memoria local
 	Obj->trozoSubColumnaTrabajo = crea_fragmento(size_subcolumna_partida);
@@ -1167,15 +1171,18 @@ void print_reg(char *s, __m512i r){
 }
 
 int horizontal_max_Vec16i(__m512i x) {
+	/*
 	__m512i shuf = _mm512_set_epi32(0,0,0,0,0,0,0,0,15,14,13,12,11,10,9,8);
-	__m512i max =  _mm512_max_epi32(_mm512_permutevar_epi32(shuf, x), x);
+	__m512i max =  _mm512_max_epi32(_mm512_permutexvar_epi32(shuf, x), x);
     shuf = _mm512_set_epi32(0,0,0,0,0,0,0,0,0,0,0,0,7,6,5,4);
-    max =  _mm512_max_epi32(_mm512_permutevar_epi32(shuf, max), max);
+    max =  _mm512_max_epi32(_mm512_permutexvar_epi32(shuf, max), max);
     shuf = _mm512_set_epi32(0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,2);
-    max =  _mm512_max_epi32(_mm512_permutevar_epi32(shuf, max), max);
+    max =  _mm512_max_epi32(_mm512_permutexvar_epi32(shuf, max), max);
     shuf = _mm512_set_epi32(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1);
-    max =  _mm512_max_epi32(_mm512_permutevar_epi32(shuf, max), max);
+    max =  _mm512_max_epi32(_mm512_permutexvar_epi32(shuf, max), max);
 	return _mm512_extract_epi32((union __m512i)max, 0);
+	*/
+	return _mm512_reduce_max_epi32 (x);
 }
 
 void vectorizacionColumnas(	estado_del_Objeto * Obj,
@@ -1200,7 +1207,6 @@ void vectorizacionColumnas(	estado_del_Objeto * Obj,
 	__m512i r_const_deleteCost __attribute__((aligned (64)));
 	__m512i r_const_gapExtend __attribute__((aligned (64)));
 	__m512i r_const_permutacion __attribute__((aligned (64)));
-	__m512i r_const_mascara __attribute__((aligned (64)));
 	__m512i r_const_zero __attribute__((aligned (64))) = _mm512_setzero_epi32();
 	#ifdef SMITHWATERMAN
 	__m512i r_maximum __attribute__((aligned (64))) = _mm512_setzero_epi32();
@@ -1216,7 +1222,6 @@ void vectorizacionColumnas(	estado_del_Objeto * Obj,
 	r_const_insertCost = _mm512_set1_epi32(INSERT_COST);
 	r_const_gapExtend = _mm512_set1_epi32(GAPEXTEND_COST);
 	r_const_permutacion = _mm512_set_epi32(14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,0);
-	r_const_mascara = _mm512_set1_epi32((unsigned int)0xFFFFFFFFFFFFFFFF);
 
 	// Inicialización de valores de entrada
 	//
@@ -1305,9 +1310,9 @@ void vectorizacionColumnas(	estado_del_Objeto * Obj,
 		//
 		//Guardamos los valores extremos
 		// TODO: Esto tarda una barbaridad.
-		contenidoSubColumnaTrabajo[y+2 - int_per_simdreg].valor = _mm512_extract_epi32((union __m512i)r_max_valor, 15);
-		contenidoSubColumnaTrabajo[y+2 - int_per_simdreg].vertical = _mm512_extract_epi32((union __m512i)r_max_vertical, 15);
-		contenidoSubColumnaTrabajo[y+2 - int_per_simdreg].horizontal = _mm512_extract_epi32((union __m512i)r_max_horizontal, 15);
+		contenidoSubColumnaTrabajo[y+2 - int_per_simdreg].valor = my_mm512_extract_epi32(r_max_valor, 15);
+		contenidoSubColumnaTrabajo[y+2 - int_per_simdreg].vertical = my_mm512_extract_epi32(r_max_vertical, 15);
+		contenidoSubColumnaTrabajo[y+2 - int_per_simdreg].horizontal = my_mm512_extract_epi32(r_max_horizontal, 15);
 #ifdef DEBUG_VECTOR
 		print_nodo("Guardo ", contenidoSubColumnaTrabajo[y+2 - int_per_simdreg], y+2 - int_per_simdreg);
 		printf("SubColumna %d: valor:%ld vertical:%d horizontal:%d \n",y+2 - int_per_simdreg,contenidoSubColumnaTrabajo[y+2 - int_per_simdreg].valor,contenidoSubColumnaTrabajo[y+2 - int_per_simdreg].vertical, contenidoSubColumnaTrabajo[y+2 - int_per_simdreg].horizontal);
@@ -1325,8 +1330,8 @@ void vectorizacionColumnas(	estado_del_Objeto * Obj,
 		// r_max desplazado se convierte en r_left
 //		printf("Antes\n");
 		// TODO Al finalizar el bucle se hace un acceso ilegal a memoria (indexOutOfbounds)
-		r_left_valor = _mm512_permutevar_epi32(r_const_permutacion, r_max_valor);
-		r_left_horizontal = _mm512_permutevar_epi32(r_const_permutacion, r_max_horizontal);
+		r_left_valor = _mm512_permutexvar_epi32(r_const_permutacion, r_max_valor);
+		r_left_horizontal = _mm512_permutexvar_epi32(r_const_permutacion, r_max_horizontal);
 		if (y+2<size_subcolumna_partida){
 			r_left_valor = _mm512_mask_i32gather_epi32(r_left_valor, 0x0001, r_const_zero, &(contenidoSubColumnaPartida[y+2].valor), 1);
 			r_left_horizontal = _mm512_mask_i32gather_epi32(r_left_horizontal, 0x0001, r_const_zero, &(contenidoSubColumnaPartida[y+2].horizontal), 1);
@@ -1393,11 +1398,14 @@ void realiza_procesamiento_columnasSIMD(estado_del_Objeto * Obj) {
 		Obj->pos_max_x = Obj->pos_max_y = -1;
 	#endif
 
+	#pragma GCC diagnostic push
+		#pragma GCC diagnostic ignored "-Wchar-subscripts"
 		// Traducimos las letras para ir más rápidos
 		for(int i=0; i < size_subfila_partida; i++)
 			Obj->secuencia_horizontal[i] = Obj->tabla_puntuacion->codificacion_horizontal[Obj->secuencia_horizontal[i]];
 		for(int j=0; j < size_subcolumna_partida; j++)
 			Obj->secuencia_vertical[j] = Obj->tabla_puntuacion->codificacion_vertical[Obj->secuencia_vertical[j]];
+	#pragma GCC diagnostic pop
 
 	// Creamos los fragmentos de trabajo en memoria local
 	Obj->trozoSubColumnaTrabajo = crea_fragmento(size_subcolumna_partida);
@@ -1791,8 +1799,9 @@ Nodo_valor** calcula_submatriz(estado_del_Objeto * Obj, int anchura, int altura)
 /** Libera la memoria de submatriz de anchura determinada. */
 void libera_submatriz(struct Nodo_valor*** ptr_matriz, int anchura){
 	unsigned int i;
-    for (i = 0; i < anchura; i++)
+    for (i = 0; i < anchura; i++) {
     	free((*ptr_matriz)[i]);
+    }
    	free(*ptr_matriz);
 }
 

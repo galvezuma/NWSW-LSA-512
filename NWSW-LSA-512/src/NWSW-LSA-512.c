@@ -73,13 +73,13 @@ int main(int argc, char *argv[]) {
     long INSERT_COST = INSERT_COST_DEFAULT, DELETE_COST = DELETE_COST_DEFAULT;
     long MATCHREPLACE_COST = MATCHREPLACE_COST_DEFAULT, GAPEXTEND_COST = GAPEXTEND_COST_DEFAULT;
     int SIZE_SUBTRABAJO_H = SIZE_SUBTRABAJO_H_DEFAULT, SIZE_SUBTRABAJO_V = SIZE_SUBTRABAJO_V_DEFAULT;
-    int NUMERO_TILES = 6; // NUMERO_TILES_DEFAULT;
+    int NUMERO_TILES = 8; // NUMERO_TILES_DEFAULT;
     char* matriz_puntuaciones = NULL;
     estado_algoritmo stage = FORWARD; //Por defecto, primera pasada
     int global = 1; //Por defecto, el algoritmo NW global
     int informacion_extendida = 1; //Por defecto, se da información extendida
 
-    /* EstadÃ­sticas de configuración extendida */
+    /* Estadísticas de configuración extendida */
     long long_s1=0, long_s2=0;
     long align_num_ids=0, align_num_gaps=0, align_long=0;
 

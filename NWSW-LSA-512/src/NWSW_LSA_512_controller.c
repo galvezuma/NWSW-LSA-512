@@ -10,6 +10,8 @@
 #include <math.h>
 #include <string.h>
 #include "MyLib.h"
+#include "priority_queue.h"
+#include "job_table.h"
 #include "NWSW_LSA_512_worker.h"
 #include "NWSW_LSA_512_controller.h"
 

@@ -21,19 +21,19 @@
 long my_clock();
 
 //Esto lo haré en la línea del compilador gcc con -D SMITHWATERMAN
-#define SMITHWATERMAN 1 //Para alineamiento local: cambios en NW_worker por SW_worker: recompilamos con esta directivaç
+#define SMITHWATERMAN 1 //Para alineamiento local: cambios en NW_worker por SW_worker: recompilamos con esta directiva
 
-//#define CLUSTALW 1 // Si activamos la flag, se aplicarán los cambios de la versión ClustalW: uso de 12 bytes por registro en lugar de 6
+//#define CLUSTALW 1 // Si activamos el flag, se aplicarán los cambios de la versión ClustalW: uso de 12 bytes por registro en lugar de 6
 // Se usarán 3 long en lugar de 1 long y 2 bytes, ya que la matriz de puntuaciones de ClustalW tiene valores > 128. ¿Resultado? Algoritmo más pesado y lento
 
 /* Tamaño fragmentos de la matriz para dividir en subtrabajos. */
-#define SIZE_SUBTRABAJO_H_DEFAULT 1000 //En un principio, cuadrados de 1000x1000
-#define SIZE_SUBTRABAJO_V_DEFAULT 1000
+#define SIZE_SUBTRABAJO_H_DEFAULT 32*100 //En un principio, cuadrados de 1000x1000
+#define SIZE_SUBTRABAJO_V_DEFAULT 32*100
 
 /* Parametrización de constantes del algoritmo. */
 #define NUMERO_TILES_DEFAULT 59 //Número de procesadores paralelos a utilizar como trabajadores (sin contar el controlador). Max=59 con G64wo: 3 shared, 1 dedicated)
 //#define SHARED_TILES 3 // Constante asociada al bootrom del G64wo: 3 shared y 1 dedicated (no lo devuelve proc_remaining() QUE NO SE PUEDEN USAR (sólo 59 como máximo)
-#define MENSAJE_TAG 210 //Tag de mensaje para el paso de mensajes entre trabajadores y controladors
+#define MENSAJE_TAG 210 //Tag de mensaje para el paso de mensajes entre trabajadores y controladores
 
 #define SIZELINE_ALIGNMENT 50 //Longitud de la línea de un alineamiento a la hora de escribir
 #define MAX_SIZEHEADER 400 //Longitud máxima de la cabecera de un fichero FASTA

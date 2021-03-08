@@ -9,6 +9,7 @@
 #define MYLIB_H_
 
 #include <pthread.h>
+#include <immintrin.h>
 
 #define MYLIB_SUCCESS 0
 
@@ -28,5 +29,8 @@ extern int mylib_proc_remaining();
 extern void mylib_die(char * msg, ...);
 extern pthread_t * mylib_proc_spawn(int num_hilos, mylibProcParam param);
 extern void mylib_wait_proc_vanishes(pthread_t * set, int num);
+
+// Functions for AVX512
+int my_mm512_extract_epi32(__m512i v, int pos);
 
 #endif /* MYLIB_H_ */
