@@ -16,10 +16,15 @@
 #include <string.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <limits.h>
 
 #include "NWSW-LSA-512.h"
 #include "Utilities.h"
 #include "GlobalData.h"
+#include "Sequence.h"
+#include "ScoreMatrix.h"
+#include "JobTable.h"
+#include "Worker.h"
 
 /** DISPLAYS USAGE */
 void printHelp() {
@@ -61,7 +66,7 @@ int main(int argc, char *argv[]) {
 		} else if(! strcmp(__2PASS, argv[pos]) ) {
 			userParams.pass = FULL_ALIGNMENT; pos++;
 		} else if(! strcmp(__GLOBAL, argv[pos]) ) {
-			userParams.algorithm = NEEDELMAN_WUNSCH; pos++;
+			userParams.algorithm = NEEDLEMAN_WUNSCH; pos++;
 		} else if(! strcmp(__LOCAL, argv[pos]) ) {
 			userParams.algorithm = SMITH_WATERMAN; pos++;
 		} else if(! strcmp(__EXTENDED, argv[pos]) ) {
@@ -139,23 +144,112 @@ int main(int argc, char *argv[]) {
 		fatalError0("Please, use the option --help to display correct usage.\n");
 	}
 	//
-	// If everything goes OK then we display the parameters and continue
-	if (userParams.verbose) {
-		fprintf(stdout, "nwsw_lsa v%.1f. Universidad de Málaga. Spain.\n", VERSION);
-		displayUserParameters(&userParams, stdout);
-	}
+	/* Everything goes OK */
 
-	/* MAIN PROCESSING */
+	/* LOAD FILES */
+	// The next structure is used throughout the functions of the program
 	struct GlobalData globalData;
+	// Loads globally the User parameters
+	copyUserParameters(&globalData, &userParams);
+
 	// Reads the Query and Subject sequence Fasta files
 	readFastaFile(userParams.queryFilename, &(globalData.query));
 	readFastaFile(userParams.subjectFilename, &(globalData.subject));
-	if (userParams.verbose) {
-		fprintf(stdout, "****** INPUT SEQUENCE ******\n");
-		fprintf(stdout, "Query (%ld nt): %s\n", strlen(globalData.query.data), globalData.query.name);
-		fprintf(stdout, "Subject (%ld nt) %s\n", strlen(globalData.subject.data), globalData.subject.name);
+
+	// Reads the Score Matrix file or loads the default one
+	if (! strcmp(userParams.matrixFilename, "")) {
+		loadDefaultMatrix(&globalData);
+	} else {
+		loadUserMatrix(userParams.matrixFilename, &globalData);
 	}
 
+	// VERBOSE
+	if (userParams.verbose) {
+		fprintf(stdout, "nwsw_lsa v%.1f. Universidad de Málaga. Spain.\n", VERSION);
+		displayUserParameters(&userParams, stdout);
+		fprintf(stdout, "****** INPUT SEQUENCES ******\n");
+		fprintf(stdout, "Query (%ld nt): %s\n", strlen(globalData.query.data), globalData.query.name);
+		fprintf(stdout, "Subject (%ld nt) %s\n", strlen(globalData.subject.data), globalData.subject.name);
+		fprintf(stdout, "****** SCORE MATRIX ******\n");
+		displayScoreMatrix(stdout, &(globalData.scoreMatrix));
+	}
+
+	/* INITIALIZATION */
+	// Checks the letters in the sequences and put them in Uppercase
+	int invalidLettersQuery, invalidLettersSubject;
+	// Checks the Query
+	invalidLettersQuery = toUpperCodeAndCheck(	&(globalData.query),
+												globalData.scoreMatrix.horizontalAlphabet,
+												globalData.scoreMatrix.horizontalCodification
+											 );
+	if (invalidLettersQuery != 0) fprintf(stderr, "Query has %d letters not found in the alphabet.\n", invalidLettersQuery);
+
+	// Checks the subject
+	invalidLettersSubject = toUpperCodeAndCheck(&(globalData.subject),
+												globalData.scoreMatrix.verticalAlphabet,
+												globalData.scoreMatrix.verticalCodification
+											   );
+	if (invalidLettersSubject != 0) fprintf(stderr, "Subject has %d letters not found in the alphabet.\n", invalidLettersSubject);
+
+	/* ESTIMATES THE FRAGMENTS SIZE AND CREATES THE TABLE OF JOBS */
+	createJobTable(&globalData);
+	/* INITIALIZES THE STACK OF JOBS */
+	globalData.stackOfJobs = createStack(max(globalData.jobTable.numFragments_X, globalData.jobTable.numFragments_Y));
+	push(&globalData.stackOfJobs, getJob(&globalData.jobTable, 0, 0)); // The job at position 0,0 is the only available by now
+
+	/* MAIN PROCESSING */
+//	displayJob(getJob(&globalData.jobTable, 0, 0));
+//	displayJob(getJob(&globalData.jobTable, 1, 0));
+//	printf("%d, %d\n", globalData.jobTable.numFragments_X, globalData.jobTable.numFragments_Y);
+		globalData.bestScore = INT_MIN;
+		// PREPARE SYNCHRONIZATION
+		int error;
+		globalData.jobTableFulfilled = 0;
+		if (userParams.verbose) {
+			error = pthread_mutex_init(&globalData.verboseStdOut_mutex, NULL);
+			if (error) fatalError0("Unable to initialize the verbose mutex.\n");
+		}
+		error = pthread_mutex_init(&globalData.globalDataAccess_mutex, NULL);
+		if (error) fatalError0("Unable to initialize the main mutex.\n");
+		error = pthread_cond_init(&globalData.jobAvailable_condition, NULL);
+		if (error) fatalError0("Unable to initialize the main synchronization condition.\n");
+		// CREATE AND LAUNCH THREADS
+		if (userParams.verbose) printf("Creating %d threads.\n", globalData.threads);
+		pthread_t * threads= (pthread_t *) internalMalloc(sizeof(pthread_t) * globalData.threads);
+		for(int i=0; i<globalData.threads; i++){
+			error = pthread_create(&(threads[i]), NULL, threadWorker, (void *)&globalData);
+			if (error) fatalError1("Unable to create the thread num. %d\n", i);
+		}
+		// WAIT FOR THREADS
+		for(int i=0; i<globalData.threads; i++){
+			error = pthread_join(threads[i], NULL);
+			if (error) fatalError1("Unable to join to the thread num. %d\n", i);
+		}
+		// DESTROY THREADS AND SYNCHRONIZATION ELEMENTS
+		error = pthread_cond_destroy(&globalData.jobAvailable_condition);
+		if (error) fatalError0("Unable to destroy the main synchronization condition.\n");
+		error = pthread_mutex_destroy(&globalData.globalDataAccess_mutex);
+		if (error) fatalError0("Unable to destroy the main mutex.\n");
+		if (userParams.verbose) {
+			error = pthread_mutex_destroy(&globalData.verboseStdOut_mutex);
+			if (error) fatalError0("Unable to destroy the verbose mutex.\n");
+		}
+		internalFree((void **) &threads);
+		// DISPLAY RESULTS
+		fprintf(stdout, "The score is: %d\n", globalData.bestScore);
+
+
+
+
+
+
+
+	/* RELEASE MEMORY */
+	freeStack(&globalData.stackOfJobs);
+	freeJobTableStruct(&globalData.jobTable, globalData.pass);
+	freeScoreMatrixStruct(&(globalData.scoreMatrix));
+	freeSequenceStruct(&(globalData.query));
+	freeSequenceStruct(&(globalData.subject));
 	return(EXIT_SUCCESS);
 }
 
@@ -252,7 +346,7 @@ void readFastaFile(char* filename, struct Sequence *seq) {
   		fastaHeader[strlen(fastaHeader)-1] = '\0';
 
   	// Let's allocate space for the Fasta content (the sequence in nucleotides)
-  	// Actually, we allocate more space than required because we store also de CR and LF
+  	// Actually, we allocate more space than required because we store also de CR and LF. See later realloc
   	fseek(file, 0, SEEK_END); // Let's go to the end of the file to estimate the maximum size of the Fasta sequence
   	long size = ftell(file) - sizeFirstLine;
   	*fastaContent = (char *) internalMalloc(sizeof(char) * (size + 1));
@@ -268,6 +362,8 @@ void readFastaFile(char* filename, struct Sequence *seq) {
 		}
   	}
   	(*fastaContent)[offset] = '\0'; // The Fasta string must be finished (delimited by \0)
+  	// A realloc is needed to take exclusively the required amount of data
+  	*fastaContent = (char *) realloc((*fastaContent), sizeof(char) * (strlen(*fastaContent) + 1));
 
 	fclose(file); // The file should be closed
 }

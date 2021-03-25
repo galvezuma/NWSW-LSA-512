@@ -9,36 +9,65 @@
 #define GLOBALDATA_H_
 
 #include <stdint.h>
+#include <pthread.h>
 
-#define MAX_SIZEHEADER 512 // Maximum length of the header in a Fasta file
+struct GlobalData; // This pre-declaration is required to avoid cyclic declarations
+
+#include "Sequence.h"
+#include "ScoreMatrix.h"
+#include "JobTable.h"
+#include "Stack.h"
+#include "NWSW-LSA-512.h"
+
 #define MAX_SIZELINE 256 // Maximum length of any data line in a Fasta file
-
-/* Structure to store a Fasta file */
-struct Sequence {
-	char name[MAX_SIZEHEADER]; // Header of the file.
-	char * data; // Content of the file, i.e., sequence of consecutive nucleotides
-};
 
 /* Global data accesible to any thread.
  * This tries to represent an Object.
  */
+// Note that unsigned or uint32_t should not be used. This is because mixing
+// int and unsigned int ¡converts negative int into positive!
 struct GlobalData {
+
+	// CLI parameters
+	enum Pass pass;
+	enum Algorithm algorithm;
+	enum Info info;
+	int32_t insert;
+	int32_t delete;
+	int32_t matchReplace __attribute__((aligned (4)));
+	int32_t gapExtend __attribute__((aligned (4)));
+	int16_t threads;
+	unsigned char verbose;
+
+	// Loaded files
 	struct Sequence query;
 	struct Sequence subject;
+	struct ScoreMatrix scoreMatrix;
+
+
+	// Job table
+	struct JobTable jobTable;
+	// Stack of jobs. It must be accessed in Mutual Exclusion
+	struct Stack stackOfJobs;
+
+	// Structures for mutual exclusion
+	pthread_cond_t jobAvailable_condition;
+	pthread_mutex_t globalDataAccess_mutex;
+	unsigned char jobTableFulfilled;
+	pthread_mutex_t verboseStdOut_mutex;
+
+	// Results
+	int bestScore;
+	struct Job *bestJob;
 };
 
-/* Definition of the score matrix. This stores i) the data itself, ii) the alphabets horizontal and vertical (just in case they are different)
- * related to columns and rows of the matrix (their lengths delimit the matrix size)
- * and the bytes [0-128] to code the sequences into numbers to address indirectly the matrix. */
- typedef struct ScoreMatrix ScoreMatrix;
+void copyUserParameters(struct GlobalData *gd, struct UserParameters *up);
+struct Job *waitForAvailableJob(struct GlobalData *gd);
+void informFinishedJob(struct GlobalData *gd, unsigned x, unsigned y, struct Node *resultingFragmentX, struct Node *resultingFragmentY);
+void saveMyBestScore(struct GlobalData *gd, int score, struct Job *bestJob);
 
- struct ScoreMatrix {
-   int** matrix; // Store the numbers of the matrix
-   char* horizontalAlphabet;
-   char* verticalAlphabet;
-   uint8_t * horizontalCodification;
-   uint8_t * verticalCodification;
-   // int id; // Just in case we should use an adaptive matrix
- };
+// Functions to block and unblock while displaying a message in verbose mode.
+void block(struct GlobalData *gd);
+void unblock(struct GlobalData *gd);
 
 #endif /* GLOBALDATA_H_ */

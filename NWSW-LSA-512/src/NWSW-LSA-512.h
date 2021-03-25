@@ -1,5 +1,5 @@
 /*
- * Definitions.h
+ * NWSW-LSA-512.h
  *
  *  Created on: Mar 9, 2021
  *      Author: galvez
@@ -36,26 +36,26 @@
 #define __VERBOSE "--verbose"
 
 /* Enumerations for parameters with exclusive values */
-enum pass { ONLY_SCORE, FULL_ALIGNMENT }; // Calculus of score or full alignment
-enum algorithm {NEEDELMAN_WUNSCH, SMITH_WATERMAN}; // Alignment global or local
-enum info {BASIC, EXTENDED}; // It should be produced Basic or Extended information file as output
+enum Pass { ONLY_SCORE, FULL_ALIGNMENT }; // Calculus of score or full alignment
+enum Algorithm {NEEDLEMAN_WUNSCH, SMITH_WATERMAN}; // Alignment global or local
+enum Info {BASIC, EXTENDED}; // It should be produced Basic or Extended information file as output
 
 /* Default values for the alignment algorithm. */
 #define DEFAULT_PASS ONLY_SCORE
-#define DEFAULT_ALGORITHM NEEDELMAN_WUNSCH
+#define DEFAULT_ALGORITHM NEEDLEMAN_WUNSCH
 #define DEFAULT_INFO EXTENDED
 #define DEFAULT_INSERT_COST 4 // Cost of opening a gap in the Query sequence [horizontal]
 #define DEFAULT_DELETE_COST 4 // Cost of opening a gap in the Subject sequence [vertical]
 #define DEFAULT_MATCHREPLACE_COST 1 // Default cost when a nucleotide to compare is not in the score matrix
 #define DEFAULT_GAPEXTEND_COST 1 // Cost of extending a gap once it has been opened
-#define DEFAULT_THREADS 4 // Cost of extending a gap once it has been opened
+#define DEFAULT_THREADS getNumberOfCores() // Number of cores given by the system
 #define DEFAULT_VERBOSE 0 // Default verbose value is FALSE
 
 /* Structure to contain user parameters */
 struct UserParameters {
-	enum pass pass;
-	enum algorithm algorithm;
-	enum info info;
+	enum Pass pass;
+	enum Algorithm algorithm;
+	enum Info info;
 	uint32_t insert;
 	uint32_t delete;
 	uint32_t matchReplace __attribute__((aligned (4)));
@@ -77,7 +77,7 @@ uint32_t parseInt(char * str, unsigned char *ok);
 int isEmptyOrNull(char *str);
 
 #define enumPassToString(value) ((value) == ONLY_SCORE)? __1PASS : __2PASS
-#define enumAlgorithmToString(value) ((value) == NEEDELMAN_WUNSCH)? __GLOBAL : __LOCAL
+#define enumAlgorithmToString(value) ((value) == NEEDLEMAN_WUNSCH)? __GLOBAL : __LOCAL
 #define enumInfoToString(value) ((value) == BASIC)? __BASIC : __EXTENDED
 
 #endif /* NWSW_LSA_512_H_ */
