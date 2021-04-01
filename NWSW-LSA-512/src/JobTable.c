@@ -25,6 +25,9 @@ void createJobTable(struct GlobalData *gd) {
 	gd->jobTable.numFragments_Y = ceilDivision(strlen(gd->subject.data), gd->jobTable.fragmentSize_Y);
 	allocateFragmentsAndJobs(gd);
 	initializeFragments(gd);
+	if (gd->verbose) {
+		fprintf(stdout, "Using (%dx%d) fragments of size [%dx%d]\n", gd->jobTable.numFragments_X, gd->jobTable.numFragments_Y, gd->jobTable.fragmentSize_X, gd->jobTable.fragmentSize_Y);
+	}
 }
 
 /* Initializes the rows and columns to store the LSA matrix */
@@ -35,12 +38,12 @@ void allocateFragmentsAndJobs(struct GlobalData *gd) {
 	size_t querySize = strlen(gd->query.data);
 	size_t subjectSize = strlen(gd->subject.data);
 	// THIS ALLOCATES THE FRAGMENTS saving a lot of space in case of ONLY_SCORE.
-	if (gd->pass == ONLY_SCORE) { // A single row and column are created
+	if (gd->pass == ONLY_SCORE) { // A single row and column are created, but longer to avoid overlapping
 		gd->jobTable.rows = (struct Node **) internalMalloc(sizeof(struct Node *)); // a single pointer because we have a single row
-		gd->jobTable.rows[0] = (struct Node*) internalMalloc(sizeof(struct Node) * (1 + querySize));
+		gd->jobTable.rows[0] = (struct Node*) internalMalloc(sizeof(struct Node) * (querySize + gd->jobTable.numFragments_X));
 		//
 		gd->jobTable.columns = (struct Node **) internalMalloc(sizeof(struct Node *)); // a single pointer because we have a single column
-		gd->jobTable.columns[0] = (struct Node*) internalMalloc(sizeof(struct Node) * (1 + subjectSize));
+		gd->jobTable.columns[0] = (struct Node*) internalMalloc(sizeof(struct Node) * (subjectSize + gd->jobTable.numFragments_Y));
 	} else { // A grid of rows and columns is created
 		gd->jobTable.rows = (struct Node **) internalMalloc(sizeof(struct Node *) * gd->jobTable.numFragments_Y); // a single pointer because we have a single row
 		for (int i=0; i<gd->jobTable.numFragments_Y; i++)
@@ -71,8 +74,13 @@ void allocateFragmentsAndJobs(struct GlobalData *gd) {
 			// job->ptrColumn = (gd->pass == ONLY_SCORE && x > 0)? NULL : gd->jobTable.columns[x] + y;
 			// A job contains two pointers. Each of them has a different from NULL value when
 			// it points to an already calculated row or column.
-			job->ptrRow = (y > 0)? NULL : gd->jobTable.rows[y] + x * gd->jobTable.fragmentSize_X;
-			job->ptrColumn = (x > 0)? NULL : gd->jobTable.columns[x] + y * gd->jobTable.fragmentSize_Y;
+			if (gd->pass == ONLY_SCORE) { // A single row and column are created, but longer to avoid overlapping
+				job->ptrRow = (y > 0)? NULL : gd->jobTable.rows[y] + x * (1 + gd->jobTable.fragmentSize_X);
+				job->ptrColumn = (x > 0)? NULL : gd->jobTable.columns[x] + y * (1 + gd->jobTable.fragmentSize_Y);
+			} else {
+				job->ptrRow = (y > 0)? NULL : gd->jobTable.rows[y] + x * gd->jobTable.fragmentSize_X;
+				job->ptrColumn = (x > 0)? NULL : gd->jobTable.columns[x] + y * gd->jobTable.fragmentSize_Y;
+			}
 		}
 }
 
@@ -103,6 +111,51 @@ void initializeStructNode(struct Node *node, int t, int u, int s) {
 
 /* Initialize the fragments of the first row and column depending on NW or SW */
 void initializeFragments(struct GlobalData *gd) {
+	// Initialization is very similar in ONLY_SCORE and FULL_ALIGNMENT and most of the core is repeated.
+	// The only difference is that, in ONLY_SCORE the fragments are adjacent and do not overlap. Therefore
+	// in ONLY_SCORE the Node between two fragments must be repeated.
+	if (gd->pass == ONLY_SCORE) {
+		// Initializes first row
+		size_t querySize = strlen(gd->query.data);
+		initializeStructNode(&gd->jobTable.rows[0][0], 0, 0, 0); // Initialize first cell of the row
+		// int i iterates over the query sequence
+		// int realPos iterates over the adjacent fragments
+		for(int i=1, realPos=1; i<querySize+1; i++, realPos++) { // Initialize the rest of the cells of the row
+			initializeStructNode(&gd->jobTable.rows[0][realPos],
+								-(gd->delete + i*gd->gapExtend),
+								-INFINITE,
+								(gd->algorithm == NEEDLEMAN_WUNSCH)? -(gd->delete + i*gd->gapExtend) : 0
+								);
+			if (i>1 && i<querySize && (i-1) % gd->jobTable.fragmentSize_X == 0) { // In junctions between consecutive fragments the node must be repeated
+				initializeStructNode(&gd->jobTable.rows[0][++realPos],
+									-(gd->delete + i*gd->gapExtend),
+									-INFINITE,
+									(gd->algorithm == NEEDLEMAN_WUNSCH)? -(gd->delete + i*gd->gapExtend) : 0
+									);
+			}
+		}
+
+		// Initializes first column
+		size_t subjectSize = strlen(gd->subject.data);
+		initializeStructNode(&gd->jobTable.columns[0][0], 0, 0, 0); // Initialize first cell of the column
+		// int i iterates over the subject sequence
+		// int realPos iterates over the adjacent fragments
+		for(int j=1, realPos=1; j<subjectSize+1; j++, realPos++) { // Initialize the rest of the cells of the column
+			initializeStructNode(&gd->jobTable.columns[0][realPos],
+								-INFINITE,
+								-(gd->insert + j*gd->gapExtend),
+								(gd->algorithm == NEEDLEMAN_WUNSCH)? -(gd->insert + j*gd->gapExtend) : 0
+								);
+			if (j>1 && j<subjectSize && (j-1) % gd->jobTable.fragmentSize_Y == 0) { // In junctions between consecutive fragments the node must be repeated
+				initializeStructNode(&gd->jobTable.columns[0][++realPos],
+												-INFINITE,
+												-(gd->insert + j*gd->gapExtend),
+												(gd->algorithm == NEEDLEMAN_WUNSCH)? -(gd->insert + j*gd->gapExtend) : 0
+												);
+			}
+		}
+
+	} else {
 		// Initializes first row
 		size_t querySize = strlen(gd->query.data);
 		initializeStructNode(&gd->jobTable.rows[0][0], 0, 0, 0); // Initialize first cell of the row
@@ -121,6 +174,7 @@ void initializeFragments(struct GlobalData *gd) {
 								-(gd->insert + j*gd->gapExtend),
 								(gd->algorithm == NEEDLEMAN_WUNSCH)? -(gd->insert + j*gd->gapExtend) : 0
 								);
+	}
 }
 
 

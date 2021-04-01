@@ -8,6 +8,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
 #include "Utilities.h"
 
 #ifdef _WIN32
@@ -72,4 +73,10 @@ int getNumberOfCores() {
 #else
     return sysconf(_SC_NPROCESSORS_ONLN);
 #endif
+}
+
+long myClock() {
+	struct timeval t;
+	gettimeofday(&t, NULL);
+	return (t.tv_sec&0x0000FFFFFFFFFFFF) * 1000l + t.tv_usec / 1000l;
 }

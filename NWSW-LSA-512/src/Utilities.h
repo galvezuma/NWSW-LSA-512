@@ -31,6 +31,7 @@ char * toString(char c);
 int ceilDivision(int a, int b);
 int restOfLengthSequence(int a, int b);
 int getNumberOfCores();
+long myClock();
 
 void readFastaFile(char* filename, struct Sequence *seq);
 

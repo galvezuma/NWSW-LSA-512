@@ -194,14 +194,18 @@ int main(int argc, char *argv[]) {
 	/* ESTIMATES THE FRAGMENTS SIZE AND CREATES THE TABLE OF JOBS */
 	createJobTable(&globalData);
 	/* INITIALIZES THE STACK OF JOBS */
-	globalData.stackOfJobs = createStack(max(globalData.jobTable.numFragments_X, globalData.jobTable.numFragments_Y));
+	globalData.stackOfJobs = createStack(&globalData, max(globalData.jobTable.numFragments_X, globalData.jobTable.numFragments_Y));
 	push(&globalData.stackOfJobs, getJob(&globalData.jobTable, 0, 0)); // The job at position 0,0 is the only available by now
+	/* CHECKS SUPPORT FOR VECTORIZATION */
+	checkSupport(&globalData);
+
 
 	/* MAIN PROCESSING */
 //	displayJob(getJob(&globalData.jobTable, 0, 0));
 //	displayJob(getJob(&globalData.jobTable, 1, 0));
 //	printf("%d, %d\n", globalData.jobTable.numFragments_X, globalData.jobTable.numFragments_Y);
-		globalData.bestScore = INT_MIN;
+		long initTime = myClock();
+		globalData.bestScore = -INFINITE;
 		// PREPARE SYNCHRONIZATION
 		int error;
 		globalData.jobTableFulfilled = 0;
@@ -236,6 +240,9 @@ int main(int argc, char *argv[]) {
 		}
 		internalFree((void **) &threads);
 		// DISPLAY RESULTS
+		long endTime = myClock();
+
+	    fprintf(stdout, "Time execution: %.3f\n", (float)(endTime-initTime)/1000);
 		fprintf(stdout, "The score is: %d\n", globalData.bestScore);
 
 

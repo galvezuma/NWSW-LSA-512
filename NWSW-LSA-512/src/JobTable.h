@@ -25,8 +25,8 @@ struct Job {
 	unsigned x, y;
 	uint32_t realSize_X;
 	uint32_t realSize_Y;
-	struct Node * ptrRow;
-	struct Node * ptrColumn;
+	struct Node * volatile ptrRow;
+	struct Node * volatile ptrColumn;
 };
 
 struct JobTable {

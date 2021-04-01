@@ -53,18 +53,22 @@ struct GlobalData {
 	// Structures for mutual exclusion
 	pthread_cond_t jobAvailable_condition;
 	pthread_mutex_t globalDataAccess_mutex;
-	unsigned char jobTableFulfilled;
+	volatile unsigned char jobTableFulfilled;
 	pthread_mutex_t verboseStdOut_mutex;
 
+	// Vectorization availability
+	int lengthVector;
+
 	// Results
-	int bestScore;
-	struct Job *bestJob;
+	volatile int bestScore;
+	struct Job * volatile bestJob;
 };
 
 void copyUserParameters(struct GlobalData *gd, struct UserParameters *up);
-struct Job *waitForAvailableJob(struct GlobalData *gd);
+struct Job * volatile waitForAvailableJob(struct GlobalData *gd);
 void informFinishedJob(struct GlobalData *gd, unsigned x, unsigned y, struct Node *resultingFragmentX, struct Node *resultingFragmentY);
 void saveMyBestScore(struct GlobalData *gd, int score, struct Job *bestJob);
+void checkSupport(struct GlobalData *gd);
 
 // Functions to block and unblock while displaying a message in verbose mode.
 void block(struct GlobalData *gd);

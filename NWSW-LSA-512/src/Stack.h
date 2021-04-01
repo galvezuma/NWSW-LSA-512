@@ -13,15 +13,15 @@
 #include "JobTable.h"
 
 struct Stack {
-	struct Job **ptrArray; // Array of pointers to Job
+	struct Job * volatile *ptrArray; // Array of pointers to Job
 	unsigned maxSize;
-	unsigned size;
+	volatile unsigned size;
 };
 
-struct Stack createStack(unsigned size);
-unsigned isEmptyStack(struct Stack *ptrStack);
+struct Stack createStack(struct GlobalData *gd, unsigned size);
+unsigned volatile isEmptyStack(struct Stack *ptrStack);
 void push(struct Stack *ptrStack, struct Job *job);
-struct Job * pop(struct Stack *ptrStack);
+struct Job * volatile pop(struct Stack *ptrStack);
 void freeStack(struct Stack *ptrStack);
 
 #endif /* STACK_H_ */
