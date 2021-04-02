@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <immintrin.h>
+#include "Utilities.h"
 #include "Vectorization512.h"
 
 #define lengthVector 16
@@ -240,6 +241,9 @@ void calculateAndAdvanceBottomRightDiagonal_512(int j, struct Node *retFragX, in
 		unsigned queryIdx = job->x * gd->jobTable.fragmentSize_X + i;
 		unsigned subjectIdx = job->y * gd->jobTable.fragmentSize_Y + j;
 		int dS[lengthVector] __attribute__((aligned (64)));
+		// Sets to zero former cells to reset unused values of the vector
+		for(int offset=0; offset < progress; offset++)
+			dS[offset] = -INFINITE;
 		for(int offset=progress; offset < lengthVector; offset++) {
 			int cellScore = gd->scoreMatrix.matrix[gd->query.dataCoded[queryIdx - offset]][gd->subject.dataCoded[subjectIdx + offset]];
 			dS[offset] = cellScore;

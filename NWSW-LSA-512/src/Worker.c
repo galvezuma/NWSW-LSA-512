@@ -45,7 +45,7 @@ void * threadWorker(void * arg) {
 //		for(int j=0; j<job->realSize_Y + 1; j++)
 //			displayNode(job->ptrColumn+j);
 //		printf("\n");
-		int score = processJob_128(gd, job, fragX, fragY);
+		int score = processJob_512(gd, job, fragX, fragY);
 		if (gd->algorithm == SMITH_WATERMAN && score > bestScore) {
 			bestScore = score;
 			if (gd->pass == FULL_ALIGNMENT) bestJob = job;
@@ -59,10 +59,10 @@ void * threadWorker(void * arg) {
 //		printf("\n");
 		informFinishedJob(gd, job->x, job->y, fragX, fragY);
 	} while(1);
-	pthread_exit(NULL);
 	if (gd->algorithm == SMITH_WATERMAN) {
 		saveMyBestScore(gd, bestScore, bestJob);
 	}
+	pthread_exit(NULL);
 }
 
 /* Calculates the  scores in a job */

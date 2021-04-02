@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <immintrin.h>
+#include "Utilities.h"
 #include "Vectorization128.h"
 
 #define lengthVector 4
@@ -32,7 +33,7 @@ inline void calculate_128(struct GlobalData *gd, struct Node_128 *arriba, struct
 inline void setPos(struct Node_128 *ptrNodeDest_128, int i, struct Node *ptrNodeSrc);
 inline void savePos(struct Node *ptrNodeDest, struct Node_128 *ptrNodeSrc_128, int i);
 inline int reduceMax_128(__m128i *ptrVector);
-inline __m128i my_mm_max_epi32(__m128i *a, __m128i *b);
+inline __m128i my_mm128_max_epi32(__m128i *a, __m128i *b);
 
 /* DEBUG FUNCTIONS */
 void displayNode_128(struct Node_128 *node128);
@@ -105,17 +106,17 @@ inline void calculate_128(struct GlobalData *gd, struct Node_128 *arriba, struct
 	// Deletion (horizontal gap). Calculus of resultado->t
 	__m128i aux1 = _mm_sub_epi32 (izquierda->t, gapExtend_128);
 	__m128i aux2 = _mm_sub_epi32 (izquierda->s, openGap_128);
-	resultado->t = my_mm_max_epi32 (&aux1, &aux2);
+	resultado->t = my_mm128_max_epi32 (&aux1, &aux2);
 	// Insertion (vertical gap). Calculus of resultado->u
 	aux1 = _mm_sub_epi32 (arriba->u, gapExtend_128);
 	aux2 = _mm_sub_epi32 (arriba->s, openGap_128);
-	resultado->u = my_mm_max_epi32 (&aux1, &aux2);
+	resultado->u = my_mm128_max_epi32 (&aux1, &aux2);
 	// Continue in diagonal. Calculus of resultado->s
 	aux1 = _mm_add_epi32 (esquina->s, *deltaScore);
-	aux1 = my_mm_max_epi32 (&aux1, &(resultado->t));
-	resultado->s = my_mm_max_epi32 (&aux1, &(resultado->u));
+	aux1 = my_mm128_max_epi32 (&aux1, &(resultado->t));
+	resultado->s = my_mm128_max_epi32 (&aux1, &(resultado->u));
 	if (gd->algorithm == SMITH_WATERMAN) {
-		resultado->s = my_mm_max_epi32 (&zeroes_128, &(resultado->s));
+		resultado->s = my_mm128_max_epi32 (&zeroes_128, &(resultado->s));
 		int aux = reduceMax_128(&resultado->s);
 		if (aux > *bestScore) *bestScore = aux;
 	}
@@ -236,6 +237,9 @@ void calculateAndAdvanceBottomRightDiagonal_128(int j, struct Node *retFragX, in
 		unsigned queryIdx = job->x * gd->jobTable.fragmentSize_X + i;
 		unsigned subjectIdx = job->y * gd->jobTable.fragmentSize_Y + j;
 		int dS[lengthVector] __attribute__((aligned (16)));
+		// Sets to zero former cells to reset unused values of the vector
+		for(int offset=0; offset < progress; offset++)
+			dS[offset] = -INFINITE;
 		for(int offset=progress; offset < lengthVector; offset++) {
 			int cellScore = gd->scoreMatrix.matrix[gd->query.dataCoded[queryIdx - offset]][gd->subject.dataCoded[subjectIdx + offset]];
 			dS[offset] = cellScore;
@@ -277,14 +281,14 @@ inline int reduceMax_128(__m128i *ptrVector) {
 	int dump[lengthVector] __attribute__((aligned (16)));
 	_mm_store_si128((__m128i *) dump, *ptrVector);
 	int ret = dump[0];
-	for(int i=1; i<lengthVector - 1; i++)
+	for(int i=1; i<lengthVector; i++)
 		if (dump[i] > ret) ret = dump[i];
 	return ret;
 }
 
 /* SSE3 has no _mm_max_epi32 so we have to implement it by our own: https://fgiesen.wordpress.com/2016/04/03/sse-mind-the-gap/
 */
-inline __m128i my_mm_max_epi32(__m128i *a, __m128i *b) {
+inline __m128i my_mm128_max_epi32(__m128i *a, __m128i *b) {
 	__m128i cond = _mm_cmpgt_epi32 (*a, *b);
 	return _mm_or_si128(_mm_and_si128(*a, cond), _mm_andnot_si128(cond, *b));
 

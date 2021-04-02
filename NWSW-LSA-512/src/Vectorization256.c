@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <immintrin.h>
+#include "Utilities.h"
 #include "Vectorization256.h"
 
 #define lengthVector 8
@@ -19,6 +20,14 @@ struct Node_256 {
 	__m256i s; // Best value
 };
 
+// Declaration of vectorized constants
+__m256i gapExtend_256;
+__m256i openGap_256;
+__m256i zeroes_256;
+// Prepare shuffle
+int arribaShuffle[] __attribute__((aligned (32))) = {0,0,1,2,3,4,5,6} ;
+__m256i arribaMask_256;
+
 extern int processJob_CISC(struct GlobalData *gd, struct Job *job, struct Node *retFragX, struct Node *retFragY);
 void initializeVectors_256(int j, struct Node *retFragX, struct GlobalData *gd, struct Job *job, struct Node_256 *arriba, struct Node_256 *izquierda, struct Node_256 *esquina, __m256i *deltaScore);
 void calculateAndAdvanceTopLeftDiagonal_256(int j, struct Node *retFragX, int i, struct GlobalData *gd, struct Job *job, struct Node_256 *arriba, struct Node_256 *izquierda, struct Node_256 *esquina, struct Node_256 * resultado, __m256i *deltaScore, int *bestScore);
@@ -28,6 +37,7 @@ inline void calculate_256(struct GlobalData *gd, struct Node_256 *arriba, struct
 inline void setPos(struct Node_256 *ptrNodeDest_256, int i, struct Node *ptrNodeSrc);
 inline void savePos(struct Node *ptrNodeDest, struct Node_256 *ptrNodeSrc_256, int i);
 inline int reduceMax_256(__m256i *ptrVector);
+inline __m256i my_mm256_max_epi32(__m256i *a, __m256i *b);
 
 /* DEBUG FUNCTIONS */
 void displayNode_256(struct Node_256 *node256);
@@ -37,6 +47,11 @@ void displayVector_256(__m256i *vector);
 /* It does the job using TRUE-VECTOR operations */
 int processJob_256(struct GlobalData *gd, struct Job *job, struct Node *retFragX, struct Node *retFragY) {
 	if (job->realSize_Y % lengthVector != 0 || job->realSize_X <= 2*lengthVector ) return processJob_CISC(gd, job, retFragX, retFragY);
+	// Creation of vectorized constants
+	gapExtend_256 = _mm256_maskz_set1_epi32(0xFF, gd->gapExtend);
+	openGap_256 = _mm256_maskz_set1_epi32(0xFF, gd->delete + gd->gapExtend);
+	zeroes_256 = _mm256_maskz_set1_epi32(0xFF, 0);
+	arribaMask_256 = _mm256_maskz_load_epi32  (0xFF, arribaShuffle);
 	// Prepare the best score of all the jobs calculated by this thread in case of S/W
 	int bestScore = -1;
 	// Variable to store values of the score matrix
@@ -98,24 +113,20 @@ void initializeVectors_256(int j, struct Node *retFragX, struct GlobalData *gd, 
 /* Calculus of a single vector in diagonal */
 //
 inline void calculate_256(struct GlobalData *gd, struct Node_256 *arriba, struct Node_256 *izquierda, struct Node_256 *esquina, struct Node_256 * resultado, __m256i *deltaScore, int *bestScore) {
-	// Creation of vectorized constants
-	__m256i gapExtend_256 = _mm256_maskz_set1_epi32(0xFF, gd->gapExtend);
-	__m256i openGap_256 = _mm256_maskz_set1_epi32(0xFF, gd->delete + gd->gapExtend);
 	// Deletion (horizontal gap). Calculus of resultado->t
 	__m256i aux1 = _mm256_maskz_sub_epi32 (0xFF, izquierda->t, gapExtend_256);
 	__m256i aux2 = _mm256_maskz_sub_epi32 (0xFF, izquierda->s, openGap_256);
-	resultado->t = _mm256_maskz_max_epi32 (0xFF, aux1, aux2);
+	resultado->t = my_mm256_max_epi32 (&aux1, &aux2);
 	// Insertion (vertical gap). Calculus of resultado->u
 	aux1 = _mm256_maskz_sub_epi32 (0xFF, arriba->u, gapExtend_256);
 	aux2 = _mm256_maskz_sub_epi32 (0xFF, arriba->s, openGap_256);
-	resultado->u = _mm256_maskz_max_epi32 (0xFF, aux1, aux2);
+	resultado->u = my_mm256_max_epi32 (&aux1, &aux2);
 	// Continue in diagonal. Calculus of resultado->s
 	aux1 = _mm256_maskz_add_epi32 (0xFF, esquina->s, *deltaScore);
-	aux1 = _mm256_maskz_max_epi32 (0xFF, aux1, resultado->t);
-	resultado->s = _mm256_maskz_max_epi32 (0xFF, aux1, resultado->u);
+	aux1 = my_mm256_max_epi32 (&aux1, &resultado->t);
+	resultado->s = my_mm256_max_epi32 (&aux1, &resultado->u);
 	if (gd->algorithm == SMITH_WATERMAN) {
-		__m256i zeroes = _mm256_maskz_set1_epi32(0xFF, 0);
-		resultado->s = _mm256_maskz_max_epi32 (0xFF, zeroes, resultado->s);
+		resultado->s = my_mm256_max_epi32 (&zeroes_256, &resultado->s);
 		int aux = reduceMax_256(&resultado->s);
 		if (aux > *bestScore) *bestScore = aux;
 	}
@@ -133,13 +144,10 @@ void calculateAndAdvanceTopLeftDiagonal_256(int j, struct Node *retFragX, int i,
 		izquierda->s = resultado->s;
 		setPos(izquierda, i, &job->ptrColumn[j+i+1]);
 	// ADVANCES arriba-top: shifts, sets pos 0 and pos i+1
-		// Prepare shuffle
-		int arribaShuffle[] __attribute__((aligned (32))) = {0,0,1,2,3,4,5,6} ;
-		__m256i arribaMask = _mm256_maskz_load_epi32  (0xFF, arribaShuffle);
 		// Shift t, u and s
-		arriba->t = _mm256_permutexvar_epi32 (arribaMask, resultado->t);
-		arriba->u = _mm256_permutexvar_epi32 (arribaMask, resultado->u);
-		arriba->s = _mm256_permutexvar_epi32 (arribaMask, resultado->s);
+		arriba->t = _mm256_permutexvar_epi32 (arribaMask_256, resultado->t);
+		arriba->u = _mm256_permutexvar_epi32 (arribaMask_256, resultado->u);
+		arriba->s = _mm256_permutexvar_epi32 (arribaMask_256, resultado->s);
 		setPos(arriba, 0, &(retFragX[i+1]));
 		setPos(arriba, i+1, &job->ptrColumn[j+i+1]);
 	// Recalculates deltaScore
@@ -168,13 +176,10 @@ void calculateAndAdvanceBody_256(int j, struct Node *retFragX, int i, struct Glo
 		izquierda->u = resultado->u;
 		izquierda->s = resultado->s;
 	// ADVANCES arriba-top: shifts and sets pos 0.
-		// Prepare shuffle
-		int arribaShuffle[] __attribute__((aligned (32))) = {0,0,1,2,3,4,5,6} ;
-		__m256i arribaMask = _mm256_maskz_load_epi32  (0xFF, arribaShuffle);
 		// Shift t, u and s
-		arriba->t = _mm256_permutexvar_epi32 (arribaMask, resultado->t);
-		arriba->u = _mm256_permutexvar_epi32 (arribaMask, resultado->u);
-		arriba->s = _mm256_permutexvar_epi32 (arribaMask, resultado->s);
+		arriba->t = _mm256_permutexvar_epi32 (arribaMask_256, resultado->t);
+		arriba->u = _mm256_permutexvar_epi32 (arribaMask_256, resultado->u);
+		arriba->s = _mm256_permutexvar_epi32 (arribaMask_256, resultado->s);
 		setPos(arriba, 0, &(retFragX[i+1]));
 	// Recalculates deltaScore
 		// Calculus of the initial positions of the sequences to compare
@@ -226,18 +231,18 @@ void calculateAndAdvanceBottomRightDiagonal_256(int j, struct Node *retFragX, in
 		izquierda->u = resultado->u;
 		izquierda->s = resultado->s;
 	// ADVANCES arriba-top: only shifts
-		// Prepare shuffle
-		int arribaShuffle[] __attribute__((aligned (32))) = {0,0,1,2,3,4,5,6} ;
-		__m256i arribaMask = _mm256_maskz_load_epi32  (0xFF, arribaShuffle);
 		// Shift t, u and s
-		arriba->t = _mm256_permutexvar_epi32 (arribaMask, resultado->t);
-		arriba->u = _mm256_permutexvar_epi32 (arribaMask, resultado->u);
-		arriba->s = _mm256_permutexvar_epi32 (arribaMask, resultado->s);
+		arriba->t = _mm256_permutexvar_epi32 (arribaMask_256, resultado->t);
+		arriba->u = _mm256_permutexvar_epi32 (arribaMask_256, resultado->u);
+		arriba->s = _mm256_permutexvar_epi32 (arribaMask_256, resultado->s);
 	// Recalculates deltaScore
 		// Calculus of the initial positions of the sequences to compare
 		unsigned queryIdx = job->x * gd->jobTable.fragmentSize_X + i;
 		unsigned subjectIdx = job->y * gd->jobTable.fragmentSize_Y + j;
 		int dS[lengthVector] __attribute__((aligned (32)));
+		// Sets to zero former cells to reset unused values of the vector
+		for(int offset=0; offset < progress; offset++)
+			dS[offset] = -INFINITE;
 		for(int offset=progress; offset < lengthVector; offset++) {
 			int cellScore = gd->scoreMatrix.matrix[gd->query.dataCoded[queryIdx - offset]][gd->subject.dataCoded[subjectIdx + offset]];
 			dS[offset] = cellScore;
@@ -274,9 +279,18 @@ inline int reduceMax_256(__m256i *ptrVector) {
 	int dump[lengthVector] __attribute__((aligned (32)));
 	_mm256_store_epi64(dump, *ptrVector);
 	int ret = dump[0];
-	for(int i=1; i<lengthVector - 1; i++)
+	for(int i=1; i<lengthVector; i++)
 		if (dump[i] > ret) ret = dump[i];
 	return ret;
+}
+
+
+/* AVX2 has no _mm_max_epi32 so we have to implement it by our own: https://fgiesen.wordpress.com/2016/04/03/sse-mind-the-gap/
+*/
+inline __m256i my_mm256_max_epi32(__m256i *a, __m256i *b) {
+	__m256i cond = _mm256_cmpgt_epi32 (*a, *b);
+	return _mm256_or_si256(_mm256_and_si256(*a, cond), _mm256_andnot_si256(cond, *b));
+
 }
 
 // Displays a struct Node_256 in a formated way

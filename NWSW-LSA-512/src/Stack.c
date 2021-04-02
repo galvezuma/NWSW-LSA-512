@@ -20,7 +20,7 @@ struct Stack createStack(struct GlobalData *gd, unsigned size) {
 	ret.maxSize = size;
 	ret.size = 0;
 	if (gd->verbose) {
-		fprintf(stdout, "Created a stack of job with maximum size: %d\n", ret.maxSize);
+		fprintf(stdout, "Created a stack of jobs with maximum size: %d\n", ret.maxSize);
 	}
 	return ret;
 }
@@ -39,15 +39,15 @@ void push(struct Stack *ptrStack, struct Job *job) {
 	}
 	ptrStack->ptrArray[ptrStack->size] = job;
 	ptrStack->size++;
-	pid_t id = syscall(__NR_gettid);
-	printf("\tInserting job=(%d,%d) ID=%d; Size=%d\n", ptrStack->ptrArray[ptrStack->size-1]->x, ptrStack->ptrArray[ptrStack->size-1]->y, id, ptrStack->size);
+//	pid_t id = syscall(__NR_gettid);
+//	printf("\tInserting job=(%d,%d) ID=%d; Size=%d\n", ptrStack->ptrArray[ptrStack->size-1]->x, ptrStack->ptrArray[ptrStack->size-1]->y, id, ptrStack->size);
 }
 
 struct Job * volatile pop(struct Stack *ptrStack) {
 	if (isEmptyStack(ptrStack )) fatalError0("Stack of jobs underflow\n");
 	ptrStack->size--;
-	pid_t id = syscall(__NR_gettid);
-	printf("Taking job=(%d,%d) ID=%d; Size=%d\n", ptrStack->ptrArray[ptrStack->size]->x, ptrStack->ptrArray[ptrStack->size]->y, id, ptrStack->size);
+//	pid_t id = syscall(__NR_gettid);
+//	printf("Taking job=(%d,%d) ID=%d; Size=%d\n", ptrStack->ptrArray[ptrStack->size]->x, ptrStack->ptrArray[ptrStack->size]->y, id, ptrStack->size);
 	return ptrStack->ptrArray[ptrStack->size];
 }
 

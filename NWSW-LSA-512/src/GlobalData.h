@@ -31,7 +31,7 @@ struct GlobalData {
 	// CLI parameters
 	enum Pass pass;
 	enum Algorithm algorithm;
-	enum Info info;
+//	enum Info info;
 	int32_t insert;
 	int32_t delete;
 	int32_t matchReplace __attribute__((aligned (4)));

@@ -25,8 +25,8 @@
 #define __2PASS "--2pass"
 #define __GLOBAL "--global"
 #define __LOCAL "--local"
-#define __EXTENDED "--extended"
-#define __BASIC "--basic"
+//#define __EXTENDED "--extended"
+//#define __BASIC "--basic"
 #define __INSERT "--insert"
 #define __DELETE "--delete"
 #define __MATCHREPLACE "--matchreplace"
@@ -38,12 +38,12 @@
 /* Enumerations for parameters with exclusive values */
 enum Pass { ONLY_SCORE, FULL_ALIGNMENT }; // Calculus of score or full alignment
 enum Algorithm {NEEDLEMAN_WUNSCH, SMITH_WATERMAN}; // Alignment global or local
-enum Info {BASIC, EXTENDED}; // It should be produced Basic or Extended information file as output
+//enum Info {BASIC, EXTENDED}; // It should be produced Basic or Extended information file as output
 
 /* Default values for the alignment algorithm. */
 #define DEFAULT_PASS ONLY_SCORE
 #define DEFAULT_ALGORITHM NEEDLEMAN_WUNSCH
-#define DEFAULT_INFO EXTENDED
+//#define DEFAULT_INFO EXTENDED
 #define DEFAULT_INSERT_COST 4 // Cost of opening a gap in the Query sequence [horizontal]
 #define DEFAULT_DELETE_COST 4 // Cost of opening a gap in the Subject sequence [vertical]
 #define DEFAULT_MATCHREPLACE_COST 1 // Default cost when a nucleotide to compare is not in the score matrix
@@ -55,7 +55,7 @@ enum Info {BASIC, EXTENDED}; // It should be produced Basic or Extended informat
 struct UserParameters {
 	enum Pass pass;
 	enum Algorithm algorithm;
-	enum Info info;
+//	enum Info info;
 	uint32_t insert;
 	uint32_t delete;
 	uint32_t matchReplace __attribute__((aligned (4)));
@@ -65,7 +65,7 @@ struct UserParameters {
 	unsigned char verbose;
 	char queryFilename[MAX_FILENAME_SIZE];				// No default. Mandatory
 	char subjectFilename[MAX_FILENAME_SIZE];			// No default. Mandatory
-	char infoFilename[MAX_FILENAME_SIZE];				// No default. Mandatory
+//	char infoFilename[MAX_FILENAME_SIZE];				// No default. Removed
 	char alignFilename[MAX_FILENAME_SIZE];
 };
 
@@ -78,6 +78,6 @@ int isEmptyOrNull(char *str);
 
 #define enumPassToString(value) ((value) == ONLY_SCORE)? __1PASS : __2PASS
 #define enumAlgorithmToString(value) ((value) == NEEDLEMAN_WUNSCH)? __GLOBAL : __LOCAL
-#define enumInfoToString(value) ((value) == BASIC)? __BASIC : __EXTENDED
+//#define enumInfoToString(value) ((value) == BASIC)? __BASIC : __EXTENDED
 
 #endif /* NWSW_LSA_512_H_ */

@@ -14,7 +14,7 @@
 void copyUserParameters(struct GlobalData *gd, struct UserParameters *up) {
 	gd->pass = up->pass;
 	gd->algorithm = up->algorithm;
-	gd->info = up->info;
+//	gd->info = up->info;
 	gd->insert = up->insert;
 	gd->delete = up->delete;
 	gd->matchReplace = up->matchReplace;
@@ -42,9 +42,9 @@ struct Job * volatile waitForAvailableJob(struct GlobalData *gd) {
 // Updates the job table, inserts new jobs in the stack when needed and notifies other threads if the stack has changed.
 // If the inserted job is the last one, sets the variable 'jobTableFulfilled'
 void informFinishedJob(struct GlobalData *gd, unsigned x, unsigned y, struct Node *resultingFragmentX, struct Node *resultingFragmentY) {
-    pthread_mutex_lock(&gd->globalDataAccess_mutex);
-    fprintf(stdout, "Finishing job %d,%d\n", x, y);
-    pthread_mutex_unlock(&gd->globalDataAccess_mutex);
+//    pthread_mutex_lock(&gd->globalDataAccess_mutex);
+//    fprintf(stdout, "Finishing job %d,%d\n", x, y);
+//    pthread_mutex_unlock(&gd->globalDataAccess_mutex);
 	struct Job *jobDone = getJob(&gd->jobTable, x, y);
 	if (x == gd->jobTable.numFragments_X - 1 && y == gd->jobTable.numFragments_Y - 1) { // The just calculated  job is the last one (right-bottom corner)
 	    pthread_mutex_lock(&gd->globalDataAccess_mutex);

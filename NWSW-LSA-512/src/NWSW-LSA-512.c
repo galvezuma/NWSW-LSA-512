@@ -33,7 +33,7 @@ void printHelp() {
 	printf("[%s]            \t Displays this helping information and exits.\n", __HELP);
 	printf("[%s | %s] \t Calculates only the score (%s) or the full alignment (%s).\n\t\t\t If %s then a file align.fa must be indicated. Default %s\n", __1PASS, __2PASS, __1PASS, __2PASS, __2PASS, enumPassToString(DEFAULT_PASS));
 	printf("[%s | %s]\t Calculates NW (%s) or SW (%s). Both with affine gaps. Default %s\n", __GLOBAL, __LOCAL, __GLOBAL, __LOCAL, enumAlgorithmToString(DEFAULT_ALGORITHM));
-	printf("[%s | %s]\t Provides a file with basic info on execution or with extended information (%s). Default %s\n", __EXTENDED, __BASIC, __EXTENDED, enumInfoToString(DEFAULT_INFO));
+//	printf("[%s | %s]\t Provides a file with basic info on execution or with extended information (%s). Default %s\n", __EXTENDED, __BASIC, __EXTENDED, enumInfoToString(DEFAULT_INFO));
 	printf("[%s=value]    \t Cost value for open gap in the query sequence. By default %d.\n", __INSERT, DEFAULT_INSERT_COST);
 	printf("[%s=value]    \t Cost value for open gap in the subject sequence. By default %d.\n", __DELETE, DEFAULT_DELETE_COST);
 	printf("[%s=value]     \t Cost value when any nucleotide to compare is not in the score matrix. By default %d.\n", __MATCHREPLACE, DEFAULT_MATCHREPLACE_COST);
@@ -69,10 +69,10 @@ int main(int argc, char *argv[]) {
 			userParams.algorithm = NEEDLEMAN_WUNSCH; pos++;
 		} else if(! strcmp(__LOCAL, argv[pos]) ) {
 			userParams.algorithm = SMITH_WATERMAN; pos++;
-		} else if(! strcmp(__EXTENDED, argv[pos]) ) {
-			userParams.info = EXTENDED; pos++;
-		} else if(! strcmp(__BASIC, argv[pos]) ) {
-			userParams.info = BASIC; pos++;
+//		} else if(! strcmp(__EXTENDED, argv[pos]) ) {
+//			userParams.info = EXTENDED; pos++;
+//		} else if(! strcmp(__BASIC, argv[pos]) ) {
+//			userParams.info = BASIC; pos++;
 		} else if(! strcmp(__VERBOSE, argv[pos]) ) {
 			userParams.verbose = 1; pos++;
 		} else if(startsWith(argv[pos], __INSERT) ) {
@@ -117,9 +117,9 @@ int main(int argc, char *argv[]) {
 				if (access(userParams.subjectFilename, R_OK)) {
 					fprintf(stderr, "Unable to read file '%s' in: %s\n", userParams.subjectFilename, argv[pos]); ok = 0;
 				}
-			} else if (positionalParameter == 2) { // It is the Information output filename
-				strcpy(userParams.infoFilename, argv[pos]);
-			} else if (positionalParameter == 3) { // It is the Alignment output filename
+//			} else if (positionalParameter == 2) { // It is the Information output filename
+//				strcpy(userParams.infoFilename, argv[pos]);
+			} else if (positionalParameter == 2) { // It is the Alignment output filename
 				strcpy(userParams.alignFilename, argv[pos]);
 			} else {
 				fprintf(stderr, "Too many positional parameters: %s\n", argv[pos]); ok=0;
@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
 		}
 		if (positionalParameter < 1) { fprintf(stderr, "Missing Query sequence filename\n"); ok = 0; }
 		if (positionalParameter < 2) { fprintf(stderr, "Missing Subject sequence filename\n"); ok = 0; }
-		if (positionalParameter < 3) { fprintf(stderr, "Missing Information output filename\n"); ok = 0; }
+//		if (positionalParameter < 3) { fprintf(stderr, "Missing Information output filename\n"); ok = 0; }
 	}
 	// If some parameter is wrong, we exit
 	if (! ok) {
@@ -265,7 +265,7 @@ struct UserParameters defaultUserParameters() {
 	struct UserParameters userParams;
 	userParams.pass 		= DEFAULT_PASS;
 	userParams.algorithm 	= DEFAULT_ALGORITHM;
-	userParams.info 		= DEFAULT_INFO;
+//	userParams.info 		= DEFAULT_INFO;
 	userParams.insert 		= DEFAULT_INSERT_COST;
 	userParams.delete  		= DEFAULT_DELETE_COST;
 	userParams.matchReplace = DEFAULT_MATCHREPLACE_COST;
@@ -275,7 +275,7 @@ struct UserParameters defaultUserParameters() {
 	userParams.verbose		= DEFAULT_VERBOSE;
 	//userParams.queryFilename			// No default. Mandatory
 	//userParams.subjectFilename			// No default. Mandatory
-	//userParams.infoFilename				// No default. Mandatory
+	//userParams.infoFilename				// No default. Removed
 	strcpy(userParams.alignFilename, "");
 	return userParams;
 }
@@ -285,7 +285,7 @@ void displayUserParameters(struct UserParameters * ptrUserParams, FILE * out) {
 	fprintf(out, "User parameters are:\n");
 	fprintf(out, "Pass: %s\n", enumPassToString(ptrUserParams->pass));
 	fprintf(out, "Algorithm: %s\n", enumAlgorithmToString(ptrUserParams->algorithm));
-	fprintf(out, "Output info: %s\n", enumInfoToString(ptrUserParams->info));
+//	fprintf(out, "Output info: %s\n", enumInfoToString(ptrUserParams->info));
 	fprintf(out, "Insert: %d\n", ptrUserParams->insert);
 	fprintf(out, "Delete: %d\n", ptrUserParams->delete);
 	fprintf(out, "Match-Replace: %d\n", ptrUserParams->matchReplace);
@@ -295,7 +295,7 @@ void displayUserParameters(struct UserParameters * ptrUserParams, FILE * out) {
 	fprintf(out, "Score matrix: %s\n", strcmp(ptrUserParams->matrixFilename, "")? ptrUserParams->matrixFilename : "Internal NUC4.4");
 	fprintf(out, "Query filename: %s\n", ptrUserParams->queryFilename);
 	fprintf(out, "Subject filename: %s\n", ptrUserParams->subjectFilename);
-	fprintf(out, "Information output filename: %s\n", ptrUserParams->infoFilename);
+//	fprintf(out, "Information output filename: %s\n", ptrUserParams->infoFilename);
 	fprintf(out, "Alignment output filename: %s\n", ptrUserParams->alignFilename);
 }
 
