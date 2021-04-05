@@ -152,6 +152,9 @@ void calculateAndAdvanceTopLeftDiagonal_128(int j, struct Node *retFragX, int i,
 			int cellScore = gd->scoreMatrix.matrix[gd->query.dataCoded[queryIdx - offset]][gd->subject.dataCoded[subjectIdx + offset]];
 			dS[offset] = cellScore;
 		}
+		// Sets to zero last cells to reset unused values of the vector
+		for(int offset=i+1; offset<lengthVector; offset++)
+			dS[offset] = -INFINITE;
 		*deltaScore = _mm_load_si128  ((__m128i *) dS);
 }
 

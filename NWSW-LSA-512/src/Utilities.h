@@ -14,6 +14,7 @@
 
 // Definition of our infinite. It could be also INT_MAX
 #define INFINITE 999999
+#define MAX_SIZELINE 256 // Maximum length of any data line in a Fasta file
 
 /* Displays a message and HALTS */
 #define fatalError0(message)  { fprintf(stderr, message); exit(EXIT_FAILURE); }
@@ -32,7 +33,5 @@ int ceilDivision(int a, int b);
 int restOfLengthSequence(int a, int b);
 int getNumberOfCores();
 long myClock();
-
-void readFastaFile(char* filename, struct Sequence *seq);
 
 #endif /* UTILITIES_H_ */

@@ -19,6 +19,11 @@ struct Sequence {
 	uint8_t *dataCoded; // Translation of the letters in the file into positions in an alphabet
 };
 
+struct NodeListSequence {
+	struct Sequence sequence;
+	struct NodeListSequence * ptrNext;
+};
+
 int toUpperCodeAndCheck(struct Sequence *seq, char *alphabet, uint8_t *codification);
 void freeSequenceStruct(struct Sequence *seq);
 

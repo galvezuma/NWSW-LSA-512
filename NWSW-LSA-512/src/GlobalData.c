@@ -13,6 +13,7 @@
 
 void copyUserParameters(struct GlobalData *gd, struct UserParameters *up) {
 	gd->pass = up->pass;
+	gd->tree = up->tree;
 	gd->algorithm = up->algorithm;
 //	gd->info = up->info;
 	gd->insert = up->insert;

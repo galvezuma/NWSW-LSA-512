@@ -82,6 +82,7 @@ void allocateFragmentsAndJobs(struct GlobalData *gd) {
 				job->ptrColumn = (x > 0)? NULL : gd->jobTable.columns[x] + y * gd->jobTable.fragmentSize_Y;
 			}
 		}
+
 }
 
 /* Frees the memory previously allocated */
@@ -179,7 +180,7 @@ void initializeFragments(struct GlobalData *gd) {
 
 
 struct Job *getJob(struct JobTable *jobTable, int posX, int posY) {
-	return jobTable->jobs + posX * jobTable->numFragments_X + posY;
+	return jobTable->jobs + posY * jobTable->numFragments_X + posX;
 }
 
 /* DEBUG FUNCTIONS */

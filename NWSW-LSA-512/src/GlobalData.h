@@ -19,8 +19,6 @@ struct GlobalData; // This pre-declaration is required to avoid cyclic declarati
 #include "Stack.h"
 #include "NWSW-LSA-512.h"
 
-#define MAX_SIZELINE 256 // Maximum length of any data line in a Fasta file
-
 /* Global data accesible to any thread.
  * This tries to represent an Object.
  */
@@ -30,6 +28,7 @@ struct GlobalData {
 
 	// CLI parameters
 	enum Pass pass;
+	enum Tree tree;
 	enum Algorithm algorithm;
 //	enum Info info;
 	int32_t insert;

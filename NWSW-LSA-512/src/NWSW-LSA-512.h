@@ -15,7 +15,7 @@
 /* CLI PARAMETERS MANAGEMENT */
 /*****************************/
 
-#define VERSION 1.1 // Current program version
+#define VERSION 1.2 // Current program version
 #define MAX_FILENAME_SIZE 512 // Maximum length of the full path of a file
 
 /* User options */
@@ -23,6 +23,8 @@
 #define __HELP "--help"
 #define __1PASS "--1pass"
 #define __2PASS "--2pass"
+#define __NJ "--nj"
+#define __UPGMA "--upgma"
 #define __GLOBAL "--global"
 #define __LOCAL "--local"
 //#define __EXTENDED "--extended"
@@ -37,11 +39,13 @@
 
 /* Enumerations for parameters with exclusive values */
 enum Pass { ONLY_SCORE, FULL_ALIGNMENT }; // Calculus of score or full alignment
+enum Tree { NEIGHBOUR_JOIN, UPGMA, NONE_TREE};
 enum Algorithm {NEEDLEMAN_WUNSCH, SMITH_WATERMAN}; // Alignment global or local
 //enum Info {BASIC, EXTENDED}; // It should be produced Basic or Extended information file as output
 
 /* Default values for the alignment algorithm. */
 #define DEFAULT_PASS ONLY_SCORE
+#define DEFAULT_TREE NONE_TREE
 #define DEFAULT_ALGORITHM NEEDLEMAN_WUNSCH
 //#define DEFAULT_INFO EXTENDED
 #define DEFAULT_INSERT_COST 4 // Cost of opening a gap in the Query sequence [horizontal]
@@ -54,6 +58,7 @@ enum Algorithm {NEEDLEMAN_WUNSCH, SMITH_WATERMAN}; // Alignment global or local
 /* Structure to contain user parameters */
 struct UserParameters {
 	enum Pass pass;
+	enum Tree tree;
 	enum Algorithm algorithm;
 //	enum Info info;
 	uint32_t insert;
@@ -63,10 +68,14 @@ struct UserParameters {
 	char matrixFilename[MAX_FILENAME_SIZE];
 	uint16_t threads;
 	unsigned char verbose;
+	/* Single pairwise filenames */
 	char queryFilename[MAX_FILENAME_SIZE];				// No default. Mandatory
 	char subjectFilename[MAX_FILENAME_SIZE];			// No default. Mandatory
 //	char infoFilename[MAX_FILENAME_SIZE];				// No default. Removed
 	char alignFilename[MAX_FILENAME_SIZE];
+	/* Multiple pairwise filenames */
+	char multifastaFilename[MAX_FILENAME_SIZE];			// No default. Mandatory
+	char newickFilename[MAX_FILENAME_SIZE];				// No default. Mandatory
 };
 
 struct UserParameters defaultUserParameters();
@@ -77,6 +86,7 @@ uint32_t parseInt(char * str, unsigned char *ok);
 int isEmptyOrNull(char *str);
 
 #define enumPassToString(value) ((value) == ONLY_SCORE)? __1PASS : __2PASS
+#define enumTreeToString(value) ((value) == NEIGHBOUR_JOIN)? __NJ : (((value) == UPGMA)? __UPGMA : "None")
 #define enumAlgorithmToString(value) ((value) == NEEDLEMAN_WUNSCH)? __GLOBAL : __LOCAL
 //#define enumInfoToString(value) ((value) == BASIC)? __BASIC : __EXTENDED
 
