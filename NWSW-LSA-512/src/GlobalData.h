@@ -21,6 +21,7 @@ struct GlobalData; // This pre-declaration is required to avoid cyclic declarati
 
 /* Global data accesible to any thread.
  * This tries to represent an Object.
+ * A DIFFERENT GlobalData structure is used for each pairwise alignment
  */
 // Note that unsigned or uint32_t should not be used. This is because mixing
 // int and unsigned int ¡converts negative int into positive!
@@ -36,6 +37,7 @@ struct GlobalData {
 	int32_t matchReplace __attribute__((aligned (4)));
 	int32_t gapExtend __attribute__((aligned (4)));
 	int16_t threads;
+	int16_t parallel;
 	unsigned char verbose;
 
 	// Loaded files
@@ -49,10 +51,12 @@ struct GlobalData {
 	// Stack of jobs. It must be accessed in Mutual Exclusion
 	struct Stack stackOfJobs;
 
-	// Structures for mutual exclusion
+	// Structures for mutual exclusion between workers to execute a single alignment
 	pthread_cond_t jobAvailable_condition;
-	pthread_mutex_t globalDataAccess_mutex;
 	volatile unsigned char jobTableFulfilled;
+
+	// Mutexes to access to this structure in mutual exclusion
+	pthread_mutex_t globalDataAccess_mutex;
 	pthread_mutex_t verboseStdOut_mutex;
 
 	// Vectorization availability

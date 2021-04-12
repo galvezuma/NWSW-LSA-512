@@ -21,6 +21,7 @@ void copyUserParameters(struct GlobalData *gd, struct UserParameters *up) {
 	gd->matchReplace = up->matchReplace;
 	gd->gapExtend = up->gapExtend;
 	gd->threads = up->threads;
+	gd->parallel = up->parallel;
 	gd->verbose = up->verbose;
 }
 

@@ -20,7 +20,7 @@ int toUpperCodeAndCheck(struct Sequence *seq, char *alphabet, uint8_t *codificat
 	uint8_t validLetters[MAX_LENGTH_ALPHABET];
 	memset(validLetters, 0, sizeof(validLetters)); // Sets to FALSE
 	// Sets to TRUE only valid letters of the alphabet
-	// Inhabilitamos temporalmente el mensaje de advertencia: array subscript has type ‘char’
+	// We disable temporarily the warning message: array subscript has type ‘char’
 	#pragma GCC diagnostic push
 		#pragma GCC diagnostic ignored "-Wchar-subscripts"
 		for(int i=0;i<strlen(alphabet); i++)
@@ -34,7 +34,8 @@ int toUpperCodeAndCheck(struct Sequence *seq, char *alphabet, uint8_t *codificat
 		// 2.- Populate the dataCoded with the index
 		// 3.- Check if the letter is valid (in the alphabet) or not
 		int countInvalidLetters = 0;
-		for (int i=0; i<strlen(seq->data); i++) {
+		int const strlenSeqData = strlen(seq->data);
+		for (int i=0; i<strlenSeqData; i++) {
 			seq->data[i] = toupper(seq->data[i]);
 			seq->dataCoded[i] = codification[seq->data[i]];
 			if (! validLetters[seq->data[i]])

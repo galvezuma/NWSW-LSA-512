@@ -33,6 +33,7 @@
 #define __DELETE "--delete"
 #define __MATCHREPLACE "--matchreplace"
 #define __THREADS "--threads"
+#define __PARALLEL "--parallel"
 #define __GAPEXTEND "--gapextend"
 #define __MATRIX "--matrix"
 #define __VERBOSE "--verbose"
@@ -53,6 +54,7 @@ enum Algorithm {NEEDLEMAN_WUNSCH, SMITH_WATERMAN}; // Alignment global or local
 #define DEFAULT_MATCHREPLACE_COST 1 // Default cost when a nucleotide to compare is not in the score matrix
 #define DEFAULT_GAPEXTEND_COST 1 // Cost of extending a gap once it has been opened
 #define DEFAULT_THREADS getNumberOfCores() // Number of cores given by the system
+#define DEFAULT_PARALLEL 1 // Number of pairwise alignments to be calculated in parallel when multifasta is provided
 #define DEFAULT_VERBOSE 0 // Default verbose value is FALSE
 
 /* Structure to contain user parameters */
@@ -67,6 +69,7 @@ struct UserParameters {
 	uint32_t gapExtend __attribute__((aligned (4)));
 	char matrixFilename[MAX_FILENAME_SIZE];
 	uint16_t threads;
+	uint16_t parallel;
 	unsigned char verbose;
 	/* Single pairwise filenames */
 	char queryFilename[MAX_FILENAME_SIZE];				// No default. Mandatory

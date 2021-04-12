@@ -8,7 +8,6 @@
 #ifndef VECTORIZATION512_H_
 #define VECTORIZATION512_H_
 
-
 #include "NWSW-LSA-512.h"
 #include "GlobalData.h"
 #include "JobTable.h"
