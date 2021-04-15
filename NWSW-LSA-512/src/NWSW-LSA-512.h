@@ -29,6 +29,10 @@
 #define __LOCAL "--local"
 //#define __EXTENDED "--extended"
 //#define __BASIC "--basic"
+#define __CISC "--cisc"
+#define __128 "--128"
+#define __256 "--256"
+#define __512 "--512"
 #define __INSERT "--insert"
 #define __DELETE "--delete"
 #define __MATCHREPLACE "--matchreplace"
@@ -40,14 +44,16 @@
 
 /* Enumerations for parameters with exclusive values */
 enum Pass { ONLY_SCORE, FULL_ALIGNMENT }; // Calculus of score or full alignment
-enum Tree { NEIGHBOUR_JOIN, UPGMA, NONE_TREE};
-enum Algorithm {NEEDLEMAN_WUNSCH, SMITH_WATERMAN}; // Alignment global or local
+enum Tree { NEIGHBOUR_JOIN, UPGMA, NONE_TREE };
+enum Algorithm {NEEDLEMAN_WUNSCH, SMITH_WATERMAN }; // Alignment global or local
+enum Vectorization { CISC, SSE3, AVX2, AVX512 };
 //enum Info {BASIC, EXTENDED}; // It should be produced Basic or Extended information file as output
 
 /* Default values for the alignment algorithm. */
 #define DEFAULT_PASS ONLY_SCORE
 #define DEFAULT_TREE NONE_TREE
 #define DEFAULT_ALGORITHM NEEDLEMAN_WUNSCH
+#define DEFAULT_VECTORIZATION SSE3
 //#define DEFAULT_INFO EXTENDED
 #define DEFAULT_INSERT_COST 4 // Cost of opening a gap in the Query sequence [horizontal]
 #define DEFAULT_DELETE_COST 4 // Cost of opening a gap in the Subject sequence [vertical]
@@ -62,6 +68,7 @@ struct UserParameters {
 	enum Pass pass;
 	enum Tree tree;
 	enum Algorithm algorithm;
+	enum Vectorization vectorization;
 //	enum Info info;
 	uint32_t insert;
 	uint32_t delete;
@@ -91,6 +98,7 @@ int isEmptyOrNull(char *str);
 #define enumPassToString(value) ((value) == ONLY_SCORE)? __1PASS : __2PASS
 #define enumTreeToString(value) ((value) == NEIGHBOUR_JOIN)? __NJ : (((value) == UPGMA)? __UPGMA : "None")
 #define enumAlgorithmToString(value) ((value) == NEEDLEMAN_WUNSCH)? __GLOBAL : __LOCAL
+#define enumVectorizationToString(value) ((value) == CISC)? __CISC : ((value) == SSE3)? __128 : ((value) == AVX2)? __256 : __512
 //#define enumInfoToString(value) ((value) == BASIC)? __BASIC : __EXTENDED
 
 #endif /* NWSW_LSA_512_H_ */

@@ -31,7 +31,7 @@ void initializeVectors_512(int j, struct Node *retFragX, struct GlobalData *gd, 
 void calculateAndAdvanceTopLeftDiagonal_512(int j, struct Node *retFragX, int i, struct GlobalData *gd, struct Job *job, struct Node_512 *arriba, struct Node_512 *izquierda, struct Node_512 *esquina, struct Node_512 * resultado, __m512i *deltaScore, int *bestScore);
 void calculateAndAdvanceBody_512(int j, struct Node *retFragX, int i, struct GlobalData *gd, struct Job *job, struct Node_512 *arriba, struct Node_512 *izquierda, struct Node_512 *esquina, struct Node_512 * resultado, __m512i *deltaScore, int *bestScore);
 void calculateAndAdvanceBottomRightDiagonal_512(int j, struct Node *retFragX, int i, struct GlobalData *gd, struct Job *job, struct Node_512 *arriba, struct Node_512 *izquierda, struct Node_512 *esquina, struct Node_512 * resultado, struct Node *retFragY, __m512i *deltaScore, int *bestScore);
-inline void calculate_512(struct GlobalData *gd, struct Node_512 *arriba, struct Node_512 *izquierda, struct Node_512 *esquina, struct Node_512 * resultado, __m512i *deltaScore, int *bestScore);
+void calculate_512(struct GlobalData *gd, struct Node_512 *arriba, struct Node_512 *izquierda, struct Node_512 *esquina, struct Node_512 * resultado, __m512i *deltaScore, int *bestScore);
 inline void setPos(struct Node_512 *ptrNodeDest_512, int i, struct Node *ptrNodeSrc);
 inline void savePos(struct Node *ptrNodeDest, struct Node_512 *ptrNodeSrc_512, int i);
 
@@ -43,6 +43,7 @@ void displayVector_512(__m512i *vector);
 /* It does the job using TRUE-VECTOR operations */
 int processJob_512(struct GlobalData *gd, struct Job *job, struct Node *retFragX, struct Node *retFragY) {
 	if (job->realSize_Y % lengthVector != 0 || job->realSize_X <= 2*lengthVector ) return processJob_CISC(gd, job, retFragX, retFragY);
+//	{ fprintf(stdout, "Executing 512-vectorial job (%d,%d) of size (%dx%d).\n", job->x, job->y, job->realSize_X, job->realSize_Y); }
 	// Load vector constants
 	// Prepare shuffle
 	const int arribaShuffle_512[] __attribute__((aligned (64))) = {0,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14};
@@ -114,7 +115,7 @@ void initializeVectors_512(int j, struct Node *retFragX, struct GlobalData *gd, 
 
 /* Calculus of a single vector in diagonal */
 //
-inline void calculate_512(struct GlobalData *gd, struct Node_512 *arriba, struct Node_512 *izquierda, struct Node_512 *esquina, struct Node_512 * resultado, __m512i *deltaScore, int *bestScore) {
+void calculate_512(struct GlobalData *gd, struct Node_512 *arriba, struct Node_512 *izquierda, struct Node_512 *esquina, struct Node_512 * resultado, __m512i *deltaScore, int *bestScore) {
 	// Deletion (horizontal gap). Calculus of resultado->t
 	__m512i aux1 = _mm512_sub_epi32 (izquierda->t, gapExtend_512);
 	__m512i aux2 = _mm512_sub_epi32 (izquierda->s, openGapDeletion_512);
@@ -199,11 +200,11 @@ void calculateAndAdvanceBody_512(int j, struct Node *retFragX, int i, struct Glo
 
 void calculateAndAdvanceBottomRightDiagonal_512(int j, struct Node *retFragX, int i, struct GlobalData *gd, struct Job *job, struct Node_512 *arriba, struct Node_512 *izquierda, struct Node_512 *esquina, struct Node_512 * resultado, struct Node *retFragY, __m512i *deltaScore, int *bestScore) {
 	calculate_512(gd, arriba, izquierda, esquina, resultado, deltaScore, bestScore);
-	int progress = i - job->realSize_X;
+	int progress = 1 + i - job->realSize_X;
 	// Saves last valid item of resultado into retFragX
 		savePos(&retFragX[i - lengthVector + 1], resultado, lengthVector - 1);
 	// Saves first valid item of resultado into retFragY
-		savePos(&retFragY[j + progress + 1], resultado, progress);
+		savePos(&retFragY[j + progress], resultado, progress - 1);
 //	if (i==18) {
 //		printf("---------------i=%d:\n", i);
 //		printf("---------------Arriba:\n");

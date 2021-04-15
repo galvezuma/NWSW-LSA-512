@@ -7,7 +7,9 @@
 
 #include <string.h>
 #include <unistd.h>
+#include <stdbool.h>
 #include <sys/syscall.h>
+
 #include "GlobalData.h"
 #include "JobTable.h"
 
@@ -15,6 +17,7 @@ void copyUserParameters(struct GlobalData *gd, struct UserParameters *up) {
 	gd->pass = up->pass;
 	gd->tree = up->tree;
 	gd->algorithm = up->algorithm;
+	gd->vectorization = up->vectorization;
 //	gd->info = up->info;
 	gd->insert = up->insert;
 	gd->delete = up->delete;
@@ -51,7 +54,7 @@ void informFinishedJob(struct GlobalData *gd, unsigned x, unsigned y, struct Nod
 	if (x == gd->jobTable.numFragments_X - 1 && y == gd->jobTable.numFragments_Y - 1) { // The just calculated  job is the last one (right-bottom corner)
 	    pthread_mutex_lock(&gd->globalDataAccess_mutex);
 	    if (gd->algorithm == NEEDLEMAN_WUNSCH) gd->bestScore = resultingFragmentX[jobDone->realSize_X].s;
-		gd->jobTableFulfilled = 1;
+		gd->jobTableFulfilled = true;
 		pthread_cond_broadcast(&gd->jobAvailable_condition);
 	    pthread_mutex_unlock(&gd->globalDataAccess_mutex);
 	}
@@ -115,12 +118,18 @@ void unblock(struct GlobalData *gd) {
 void checkSupport(struct GlobalData *gd) {
 	if (__builtin_cpu_supports ("avx512f")) {
 		gd->lengthVector = 16;
+		gd->vectorization = AVX512;
 		if (gd->verbose) fprintf(stdout, "AVX512 vectorization supported.\n");
 	} else if (__builtin_cpu_supports ("avx2")) {
 		gd->lengthVector = 8;
+		gd->vectorization = AVX2;
 		if (gd->verbose) fprintf(stdout, "AVX2 vectorization supported.\n");
-	} else if (__builtin_cpu_supports ("avx")) {
+	} else if (__builtin_cpu_supports ("sse3")) {
 		gd->lengthVector = 4;
-		if (gd->verbose) fprintf(stdout, "AVX vectorization supported.\n");
+		gd->vectorization = SSE3;
+		if (gd->verbose) fprintf(stdout, "SSE3 vectorization supported.\n");
+	} else {
+		gd->vectorization = CISC;
+		if (gd->verbose) fprintf(stdout, "No vectorization supported.\n");
 	}
 }

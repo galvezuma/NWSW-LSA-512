@@ -43,6 +43,7 @@ void displayVector_128(__m128i *vector);
 /* It does the job using TRUE-VECTOR operations */
 int processJob_128(struct GlobalData *gd, struct Job *job, struct Node *retFragX, struct Node *retFragY) {
 	if (job->realSize_Y % lengthVector != 0 || job->realSize_X <= 2*lengthVector ) return processJob_CISC(gd, job, retFragX, retFragY);
+//	{ fprintf(stdout, "Executing 128-vectorial job (%d,%d) of size (%dx%d).\n", job->x, job->y, job->realSize_X, job->realSize_Y);  }
 	// Creation of vectorized constants
 	gapExtend_128 = _mm_set1_epi32(gd->gapExtend);
 	openGap_128 = _mm_set1_epi32(gd->delete + gd->gapExtend);
@@ -87,9 +88,12 @@ void initializeVectors_128(int j, struct Node *retFragX, struct GlobalData *gd, 
 	izquierda->s = _mm_set1_epi32(job->ptrColumn[j+1].s);
 	// Fill first node of arriba with retFragX[1]; and the second one with job->ptrColumn[j+1]
 	// The rest of nodes may be garbage
-	arriba->t = _mm_setr_epi32(0, 0, job->ptrColumn[j+1].t, retFragX[1].t);
-	arriba->u = _mm_setr_epi32(0, 0, job->ptrColumn[j+1].u, retFragX[1].u);
-	arriba->s = _mm_setr_epi32(0, 0, job->ptrColumn[j+1].s, retFragX[1].s);
+//	arriba->t = _mm_setr_epi32(0, 0, job->ptrColumn[j+1].t, retFragX[1].t);
+//	arriba->u = _mm_setr_epi32(0, 0, job->ptrColumn[j+1].u, retFragX[1].u);
+//	arriba->s = _mm_setr_epi32(0, 0, job->ptrColumn[j+1].s, retFragX[1].s);
+	arriba->t = _mm_setr_epi32(retFragX[1].t, job->ptrColumn[j+1].t, 0, 0);
+	arriba->u = _mm_setr_epi32(retFragX[1].u, job->ptrColumn[j+1].u, 0, 0);
+	arriba->s = _mm_setr_epi32(retFragX[1].s, job->ptrColumn[j+1].s, 0, 0);
 	// Fill first node of deltaScore with data from the score matrix
 	// The rest of nodes may be garbage
 	// Calculus of the initial positions of the sequences to compare
@@ -193,11 +197,11 @@ void calculateAndAdvanceBody_128(int j, struct Node *retFragX, int i, struct Glo
 
 void calculateAndAdvanceBottomRightDiagonal_128(int j, struct Node *retFragX, int i, struct GlobalData *gd, struct Job *job, struct Node_128 *arriba, struct Node_128 *izquierda, struct Node_128 *esquina, struct Node_128 * resultado, struct Node *retFragY, __m128i *deltaScore, int *bestScore) {
 	calculate_128(gd, arriba, izquierda, esquina, resultado, deltaScore, bestScore);
-	int progress = i - job->realSize_X;
+	int progress = 1 + i - job->realSize_X;
 	// Saves last valid item of resultado into retFragX
 		savePos(&retFragX[i - lengthVector + 1], resultado, lengthVector - 1);
 	// Saves first valid item of resultado into retFragY
-		savePos(&retFragY[j + progress + 1], resultado, progress);
+		savePos(&retFragY[j + progress], resultado, progress - 1);
 //	if (i==18) {
 //		printf("---------------i=%d:\n", i);
 //		printf("---------------Arriba:\n");

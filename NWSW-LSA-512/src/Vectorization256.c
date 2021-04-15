@@ -47,6 +47,7 @@ void displayVector_256(__m256i *vector);
 /* It does the job using TRUE-VECTOR operations */
 int processJob_256(struct GlobalData *gd, struct Job *job, struct Node *retFragX, struct Node *retFragY) {
 	if (job->realSize_Y % lengthVector != 0 || job->realSize_X <= 2*lengthVector ) return processJob_CISC(gd, job, retFragX, retFragY);
+//	{ fprintf(stdout, "Executing 256-vectorial job (%d,%d) of size (%dx%d).\n", job->x, job->y, job->realSize_X, job->realSize_Y); }
 	// Creation of vectorized constants
 	gapExtend_256 = _mm256_maskz_set1_epi32(0xFF, gd->gapExtend);
 	openGap_256 = _mm256_maskz_set1_epi32(0xFF, gd->delete + gd->gapExtend);
@@ -199,11 +200,11 @@ void calculateAndAdvanceBody_256(int j, struct Node *retFragX, int i, struct Glo
 
 void calculateAndAdvanceBottomRightDiagonal_256(int j, struct Node *retFragX, int i, struct GlobalData *gd, struct Job *job, struct Node_256 *arriba, struct Node_256 *izquierda, struct Node_256 *esquina, struct Node_256 * resultado, struct Node *retFragY, __m256i *deltaScore, int *bestScore) {
 	calculate_256(gd, arriba, izquierda, esquina, resultado, deltaScore, bestScore);
-	int progress = i - job->realSize_X;
+	int progress = 1 + i - job->realSize_X;
 	// Saves last valid item of resultado into retFragX
 		savePos(&retFragX[i - lengthVector + 1], resultado, lengthVector - 1);
 	// Saves first valid item of resultado into retFragY
-		savePos(&retFragY[j + progress + 1], resultado, progress);
+		savePos(&retFragY[j + progress], resultado, progress - 1);
 //	if (i==18) {
 //		printf("---------------i=%d:\n", i);
 //		printf("---------------Arriba:\n");

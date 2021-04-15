@@ -203,11 +203,11 @@ void calculateAndAdvanceBody_KNC(int j, struct Node *retFragX, int i, struct Glo
 
 void calculateAndAdvanceBottomRightDiagonal_KNC(int j, struct Node *retFragX, int i, struct GlobalData *gd, struct Job *job, struct Node_KNC *arriba, struct Node_KNC *izquierda, struct Node_KNC *esquina, struct Node_KNC * resultado, struct Node *retFragY, __m512i *deltaScore, int *bestScore) {
 	calculate_KNC(gd, arriba, izquierda, esquina, resultado, deltaScore, bestScore);
-	int progress = i - job->realSize_X;
+	int progress = 1 + i - job->realSize_X;
 	// Saves last valid item of resultado into retFragX
 		savePos(&retFragX[i - lengthVector + 1], resultado, lengthVector - 1);
 	// Saves first valid item of resultado into retFragY
-		savePos(&retFragY[j + progress + 1], resultado, progress);
+		savePos(&retFragY[j + progress], resultado, progress - 1);
 //	if (i==18) {
 //		printf("---------------i=%d:\n", i);
 //		printf("---------------Arriba:\n");

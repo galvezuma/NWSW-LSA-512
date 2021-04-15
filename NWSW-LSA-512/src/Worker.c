@@ -30,6 +30,14 @@ int processJob_CISC(struct GlobalData *gd, struct Job *job, struct Node *retFrag
 void * threadWorker(void * arg) {
 	// Takes the globalData as argument
 	struct GlobalData *gd = (struct GlobalData *) arg;
+	// Sets the function to do the process depending on vectorization support and user preferences
+	int (* processJob) (struct GlobalData *, struct Job *, struct Node *, struct Node *);
+	switch (gd->vectorization) {
+		case SSE3 : processJob = processJob_128; break;
+		case AVX2 : processJob = processJob_256; break;
+		case AVX512 : processJob = processJob_512; break;
+		default: processJob = processJob_CISC;
+	}
 	// Prepare the best score of all the jobs calculated by this thread in case of S/W
 	int bestScore = -1;
 	struct Job *bestJob = NULL;
@@ -38,14 +46,18 @@ void * threadWorker(void * arg) {
 		if (job == NULL) break;
 		struct Node fragX[job->realSize_X + 1];
 		struct Node fragY[job->realSize_Y + 1];
-//		printf("Beginning with...\n");
+//		printf("Beginning with job (%d,%d)... \n", job->x, job->y);
 //		for(int i=0; i<job->realSize_X + 1; i++)
 //			displayNode(job->ptrRow+i);
 //		printf("\n");
 //		for(int j=0; j<job->realSize_Y + 1; j++)
 //			displayNode(job->ptrColumn+j);
 //		printf("\n");
-		int score = processJob_512(gd, job, fragX, fragY);
+
+		/***************************/
+		/* MAIN CALL TO PROCESSING */
+		/***************************/
+		int score = processJob(gd, job, fragX, fragY);
 		if (gd->algorithm == SMITH_WATERMAN && score > bestScore) {
 			bestScore = score;
 			if (gd->pass == FULL_ALIGNMENT) bestJob = job;

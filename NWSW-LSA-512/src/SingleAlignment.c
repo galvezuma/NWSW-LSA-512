@@ -7,6 +7,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "SingleAlignment.h"
 #include "Utilities.h"
@@ -15,6 +16,7 @@
 #include "ScoreMatrix.h"
 #include "Fasta.h"
 #include "Worker.h"
+#include "BackwardsPairwise.h"
 
 
 // Global data accesible by all threadAligner
@@ -103,24 +105,29 @@ int singlePairwise(struct UserParameters *ptrUserParams) {
 /*    This is called from Single and Multi pairwise     */
 //
 int executePairwise(struct GlobalData *gd) {
+	/* CHECKS SUPPORT FOR VECTORIZATION */
+	enum Vectorization userParamVectorization = gd->vectorization;
+	checkSupport(gd);
+	if (gd->vectorization < userParamVectorization)
+		fprintf(stdout, "%s not supported. Changing to %s.\n", enumVectorizationToString(userParamVectorization), enumVectorizationToString(gd->vectorization));
+	else
+		gd->vectorization = userParamVectorization;
+	if (gd->verbose) { fprintf(stdout, "Using vectorization: %s.\n", enumVectorizationToString(gd->vectorization)); }
 	/* ESTIMATES THE FRAGMENTS SIZE AND CREATES THE TABLE OF JOBS */
 	createJobTable(gd);
 	/* INITIALIZES THE STACK OF JOBS */
 	gd->stackOfJobs = createStack(gd, max(gd->jobTable.numFragments_X, gd->jobTable.numFragments_Y));
 	push(&gd->stackOfJobs, getJob(&gd->jobTable, 0, 0)); // The job at position 0,0 is the only available by now
-	/* CHECKS SUPPORT FOR VECTORIZATION */
-	checkSupport(gd);
-
 
 	/* MAIN PROCESSING */
-//	displayJob(getJob(&globalData.jobTable, 0, 0));
+//	displayJob(getJob(&gd->jobTable, 0, 0));
 //	displayJob(getJob(&globalData.jobTable, 1, 0));
 //	printf("%d, %d\n", globalData.jobTable.numFragments_X, globalData.jobTable.numFragments_Y);
 		long initTime = myClock();
 		gd->bestScore = -INFINITE;
 		// PREPARE SYNCHRONIZATION AMONG WORKERS
 		int error;
-		gd->jobTableFulfilled = 0;
+		gd->jobTableFulfilled = false;
 		if (gd->verbose) {
 			error = pthread_mutex_init(&gd->verboseStdOut_mutex, NULL);
 			if (error) fatalError0("Unable to initialize the verbose mutex.\n");
@@ -155,6 +162,18 @@ int executePairwise(struct GlobalData *gd) {
 		long endTime = myClock();
 		if (gd->verbose)
 			fprintf(stdout, "Time execution: %.3f\n", (float)(endTime-initTime)/1000);
+
+		if (gd->pass == FULL_ALIGNMENT) {
+			initTime = myClock();
+			struct FastaPairwiseAlignment pairAlign = getFastaAlignment(gd);
+			endTime = myClock();
+			if (gd->verbose)
+				fprintf(stdout, "Time execution of backwards stage: %.3f\n", (float)(endTime-initTime)/1000);
+//			fprintf(stdout, "%s\n", pairAlign.sequence[0]->name);
+//			fprintf(stdout, "%s\n", pairAlign.alignment[0]);
+//			fprintf(stdout, "%s\n", pairAlign.sequence[1]->name);
+//			fprintf(stdout, "%s\n", pairAlign.alignment[1]);
+		}
 
 	/* RELEASE MEMORY */
 	freeStack(&gd->stackOfJobs);

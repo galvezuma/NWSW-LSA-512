@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 #include <pthread.h>
+#include <stdbool.h>
 
 struct GlobalData; // This pre-declaration is required to avoid cyclic declarations
 
@@ -18,6 +19,7 @@ struct GlobalData; // This pre-declaration is required to avoid cyclic declarati
 #include "JobTable.h"
 #include "Stack.h"
 #include "NWSW-LSA-512.h"
+
 
 /* Global data accesible to any thread.
  * This tries to represent an Object.
@@ -31,6 +33,7 @@ struct GlobalData {
 	enum Pass pass;
 	enum Tree tree;
 	enum Algorithm algorithm;
+	enum Vectorization vectorization;
 //	enum Info info;
 	int32_t insert;
 	int32_t delete;
@@ -53,7 +56,7 @@ struct GlobalData {
 
 	// Structures for mutual exclusion between workers to execute a single alignment
 	pthread_cond_t jobAvailable_condition;
-	volatile unsigned char jobTableFulfilled;
+	volatile bool jobTableFulfilled;
 
 	// Mutexes to access to this structure in mutual exclusion
 	pthread_mutex_t globalDataAccess_mutex;
