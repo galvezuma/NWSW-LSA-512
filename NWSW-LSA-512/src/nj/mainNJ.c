@@ -19,9 +19,9 @@
 #include "utilities.h"
 
 
-dist_matrix *loadDistMatrix(int species_count, int *ptrArray, char **arraySpeciesName);
+dist_matrix *loadDistMatrix(int species_count, double *ptrArray, char **arraySpeciesName);
 
-int mainNJ(int numSequences, int *ptrArray, char **arraySpeciesName, int verbose ) {
+int mainNJ(int numSequences, double *ptrArray, char **arraySpeciesName, int verbose, char *filename) {
 
         dist_matrix *dmat = loadDistMatrix(numSequences, ptrArray, arraySpeciesName);
 
@@ -86,14 +86,14 @@ int mainNJ(int numSequences, int *ptrArray, char **arraySpeciesName, int verbose
             btree_print_tree(phyl_tree);
             printf("\n\n");
         }
-
+        exportToNewick(filename, phyl_tree);
         dist_matrix_free(dmat);
         btree_storage_free(tree_storage);
 
     return EXIT_SUCCESS;
 }
 
-dist_matrix *loadDistMatrix(int species_count, int *ptrArray, char **arraySpeciesName) {
+dist_matrix *loadDistMatrix(int species_count, double *ptrArray, char **arraySpeciesName) {
 
     dist_matrix *dmat = dist_matrix_init(species_count);
 
@@ -114,7 +114,7 @@ dist_matrix *loadDistMatrix(int species_count, int *ptrArray, char **arraySpecie
 
         for (uint32_t j = 0; j < i; j++) {
             double *element = dist_matrix_element(dmat, i, j);
-            *element = (double) ptrArray[(i-1) * (species_count - 1) + j];
+            *element = ptrArray[(i-1) * (species_count - 1) + j];
         }
     }
 

@@ -7,6 +7,7 @@
 
 #include "phylogenetic_tree.h"
 #include "utilities.h"
+#include "../Utilities.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -110,9 +111,40 @@ void btree_print_tree(btree_node *root) {
     btree_print_node(root, 0, 0, is_open);
 }
 
+void recursiveNewick(FILE *file, btree_node *root);
+void exportToNewick(char *filename, btree_node *root) {
+	FILE *file;
+	if((file = fopen(filename, "wt")) == NULL) {
+		fatalError1("Unable to open the output Fasta alignment file: %s\n", filename); // This HALTS
+		}
+	// Saves the tree resursively.
+	recursiveNewick(file, root);
+	fprintf(file, ";\n"); // A semicolon is mandatory at the end of the tree.
+	//
+	fclose(file);
+}
+
+void recursiveNewick(FILE *file, btree_node *root) {
+    if (root == NULL) return;
+    if (root->left == NULL || root->right == NULL) {
+    	fprintf(file, "%s", root->node_name);
+    	return ;
+    }
+    fprintf(file, "(");
+    recursiveNewick(file, root->left); fprintf(file, ":%f", root->distance_left);
+    fprintf(file, ",");
+    recursiveNewick(file, root->right); fprintf(file, ":%f", root->distance_right);
+    fprintf(file, ")");
+    fprintf(file, "%s", root->node_name);
+}
+
 void btree_print_trees(btree_node **trees, uint32_t tree_count) {
     for (uint32_t i = 0; i < tree_count; i++) {
         btree_print_tree(trees[i]);
+        printf("\n");
+    }
+    for (uint32_t i = 0; i < tree_count; i++) {
+    	recursiveNewick(stdout, trees[i]);
         printf("\n");
     }
 }

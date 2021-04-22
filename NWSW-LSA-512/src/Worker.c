@@ -16,10 +16,14 @@
 #include "NWSW-LSA-512.h"
 #include "GlobalData.h"
 #include "JobTable.h"
-#include "Vectorization128.h"
-#include "Vectorization256.h"
-#include "Vectorization512.h"
 
+#ifndef KNC
+	#include "Vectorization128.h"
+	#include "Vectorization256.h"
+	#include "Vectorization512.h"
+#else
+	#include "VectorizationKNC.h"
+#endif
 
 int processJob_CISC(struct GlobalData *gd, struct Job *job, struct Node *retFragX, struct Node *retFragY);
 
@@ -32,12 +36,16 @@ void * threadWorker(void * arg) {
 	struct GlobalData *gd = (struct GlobalData *) arg;
 	// Sets the function to do the process depending on vectorization support and user preferences
 	int (* processJob) (struct GlobalData *, struct Job *, struct Node *, struct Node *);
+#ifndef KNC
 	switch (gd->vectorization) {
 		case SSE3 : processJob = processJob_128; break;
 		case AVX2 : processJob = processJob_256; break;
 		case AVX512 : processJob = processJob_512; break;
 		default: processJob = processJob_CISC;
 	}
+#else
+	processJob = processJob_KNC;
+#endif
 	// Prepare the best score of all the jobs calculated by this thread in case of S/W
 	int bestScore = -1;
 	struct Job *bestJob = NULL;

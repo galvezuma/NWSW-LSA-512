@@ -20,6 +20,7 @@ struct FastaJobAlignment {
 	char * fastaSubAlign[2];
 	int upperLeft_x;
 	int upperLeft_y;
+	bool swFinished; // To register if the SW backwards has finished (reached a 0 score)
 };
 
 struct FastaJobAlignment fulfillJob(struct GlobalData * gd, struct Job *job, int starting_x, int starting_y, bool initialJob);
@@ -60,8 +61,12 @@ struct FastaPairwiseAlignment getFastaAlignment(struct GlobalData * gd) {
 	// Initially, the alignments are obtained in REVERSE ORDER
 	//
 	struct FastaJobAlignment subAlign = fulfillJob(gd, lowerRightJob, starting_x, starting_y, true);
-	ret.alignment[0] = strdup(subAlign.fastaSubAlign[0]);
-	ret.alignment[1] = strdup(subAlign.fastaSubAlign[1]);
+	ret.alignment[0] = internalMalloc(strlen(ret.sequence[0]->data) + strlen(ret.sequence[1]->data) + 1); // Maximum possible length
+	ret.alignment[1] = internalMalloc(strlen(ret.sequence[0]->data) + strlen(ret.sequence[1]->data) + 1); // Maximum possible length
+	strcpy(ret.alignment[0], subAlign.fastaSubAlign[0]);
+	strcpy(ret.alignment[1], subAlign.fastaSubAlign[1]);
+	int currentLength = strlen(ret.alignment[0]); // Lengths of ret.alignment[0] and ret.alignment[1] are the same.
+
 	freeFastaJobAlignmentStruct(&subAlign);
 
 
@@ -73,6 +78,7 @@ struct FastaPairwiseAlignment getFastaAlignment(struct GlobalData * gd) {
 		if (subAlign.upperLeft_y == 0) currentFragment_Y--;
 		// We check if the loop must end
 		if (currentFragment_X < 0 || currentFragment_Y < 0) break; // We have reached one wall of the Job table.
+		if (subAlign.swFinished) break; // We have reached the beginning of a local alignment.
 
 		struct Job * currentJob = getJob(&gd->jobTable, currentFragment_X, currentFragment_Y);
 		// Let's locate the position from where to start
@@ -82,44 +88,52 @@ struct FastaPairwiseAlignment getFastaAlignment(struct GlobalData * gd) {
 		/* Let's do the fulfill */
 		/************************/
 		subAlign = fulfillJob(gd, currentJob, starting_x, starting_y, false);
-		reconcatStr(&ret.alignment[0], subAlign.fastaSubAlign[0]);
-		reconcatStr(&ret.alignment[1], subAlign.fastaSubAlign[1]);
+		strcpy(ret.alignment[0] + currentLength, subAlign.fastaSubAlign[0]);
+		strcpy(ret.alignment[1] + currentLength, subAlign.fastaSubAlign[1]);
+		currentLength += strlen(subAlign.fastaSubAlign[0]); // Lengths of subAlign.fastaSubAlign[0] and subAlign.fastaSubAlign[1] are the same.
 		freeFastaJobAlignmentStruct(&subAlign);
 	} while(true);
 
 	// Finally, a likely initial gap in the alignment must be appended.
 	// We must put it in reverse order, like the other slices/subalignments.
-	if (currentFragment_X < 0) { // Check for going up up to the top of the Job Table
-		int numChars = subAlign.upperLeft_y + (currentFragment_Y) * gd->jobTable.fragmentSize_Y;
-		if (numChars > 0) { // There is a gap at the beginning
-			char sliceQuery[numChars + 1];
-			char sliceSubject[numChars + 1];
-			for(int i=0; i<numChars; i++) {
-				sliceQuery[i] = '-';
-				sliceSubject[i] = gd->subject.data[numChars - i - 1];
+	// If the algorithm is Smith-Waterman, this process is not done.
+	if (gd->algorithm == NEEDLEMAN_WUNSCH) {
+		if (currentFragment_X < 0) { // Check for going up up to the top of the Job Table
+			int numChars = subAlign.upperLeft_y + (currentFragment_Y) * gd->jobTable.fragmentSize_Y;
+			if (numChars > 0) { // There is a gap at the beginning
+				char sliceQuery[numChars + 1];
+				char sliceSubject[numChars + 1];
+				for(int i=0; i<numChars; i++) {
+					sliceQuery[i] = '-';
+					sliceSubject[i] = gd->subject.data[numChars - i - 1];
+				}
+				sliceQuery[numChars] = sliceSubject[numChars] = '\0';
+				strcpy(ret.alignment[0] + currentLength, sliceQuery);
+				strcpy(ret.alignment[1] + currentLength, sliceSubject);
+				currentLength += numChars;
 			}
-			sliceQuery[numChars] = sliceSubject[numChars] = '\0';
-			reconcatStr(&ret.alignment[0], sliceQuery);
-			reconcatStr(&ret.alignment[1], sliceSubject);
-		}
-	} else if (currentFragment_Y < 0) { // Check for going up up to the top of the Job Table
-		int numChars = subAlign.upperLeft_x + (currentFragment_X) * gd->jobTable.fragmentSize_X;
-		if (numChars > 0) { // There is a gap at the beginning
-			char sliceQuery[numChars + 1];
-			char sliceSubject[numChars + 1];
-			for(int i=0; i<numChars; i++) {
-				sliceQuery[i] = gd->query.data[numChars - i - 1];
-				sliceSubject[i] = '-';
+		} else if (currentFragment_Y < 0) { // Check for going up up to the top of the Job Table
+			int numChars = subAlign.upperLeft_x + (currentFragment_X) * gd->jobTable.fragmentSize_X;
+			if (numChars > 0) { // There is a gap at the beginning
+				char sliceQuery[numChars + 1];
+				char sliceSubject[numChars + 1];
+				for(int i=0; i<numChars; i++) {
+					sliceQuery[i] = gd->query.data[numChars - i - 1];
+					sliceSubject[i] = '-';
+				}
+				sliceQuery[numChars] = sliceSubject[numChars] = '\0';
+				strcpy(ret.alignment[0] + currentLength, sliceQuery);
+				strcpy(ret.alignment[1] + currentLength, sliceSubject);
+				currentLength += numChars;
 			}
-			sliceQuery[numChars] = sliceSubject[numChars] = '\0';
-			reconcatStr(&ret.alignment[0], sliceQuery);
-			reconcatStr(&ret.alignment[1], sliceSubject);
 		}
 	}
 
 	// Alignments are in reverse order and must be reoriented
 	reverseStr(ret.alignment[0]);
 	reverseStr(ret.alignment[1]);
+	ret.alignment[0] = realloc(ret.alignment[0], currentLength + 1);
+	ret.alignment[1] = realloc(ret.alignment[1], currentLength + 1);
 	return ret;
 }
 
@@ -145,6 +159,7 @@ struct FastaJobAlignment fulfillJob(struct GlobalData * gd, struct Job *job, int
 		// ...and copy the column
 		for(int j=0; j <= starting_y; j++)
 			*array_2(0, j) = job->ptrColumn[j]; // array[0][j] = job->ptrColumn[j];
+		//
 		/* This fulfills entirely the matrix of the Job with Nodes */
 		//
 		int bestX = starting_x;
@@ -175,9 +190,11 @@ struct FastaJobAlignment fulfillJob(struct GlobalData * gd, struct Job *job, int
 		ret.fastaSubAlign[0] = (char *) internalMalloc(starting_x + starting_y + 1);
 		ret.fastaSubAlign[1] = (char *) internalMalloc(starting_x + starting_y + 1);
 		int posSubAlign = 0;
-		int i = starting_x;
-		int j = starting_y;
-		while(i > 0 && j > 0) {
+		int i = (gd->algorithm == SMITH_WATERMAN)? bestX : starting_x;
+		int j = (gd->algorithm == SMITH_WATERMAN)? bestY : starting_y;
+		ret.swFinished = false;
+		while(i > 0 && j > 0 && ! ret.swFinished) {
+			if (gd->algorithm == SMITH_WATERMAN && array_2(i, j)->s == 0) ret.swFinished = true;
 			if (array_2(i, j)->s == array_2(i, j)->t) { // Comes from the left // if (array[i][j].s == array[i][j].t)
 				ret.fastaSubAlign[0][posSubAlign] = gd->query.data[queryIdx+i-1];
 				ret.fastaSubAlign[1][posSubAlign] = '-';
@@ -208,6 +225,12 @@ void inline freeFastaJobAlignmentStruct(struct FastaJobAlignment *subAlign) {
 		internalFree((void **) &subAlign->fastaSubAlign[1]);
 }
 
+void freeFastaPairwiseAlignmentStruct(struct FastaPairwiseAlignment *pairAlign) {
+	if (pairAlign->alignment[0] != NULL) internalFree((void **) &pairAlign->alignment[0]);
+	if (pairAlign->alignment[1] != NULL) internalFree((void **) &pairAlign->alignment[1]);
+}
+
+// UNUSED
 // Concat a string to another string by allocating memory.
 void reconcatStr(char **ptrDst, char *src) {
 	char *ret;

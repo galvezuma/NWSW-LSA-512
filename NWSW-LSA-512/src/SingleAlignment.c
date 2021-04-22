@@ -33,8 +33,7 @@ struct AlignerSynchronization {
 	int * scores;
 };
 
-int executePairwise(struct GlobalData *gd);
-
+void computeNormalizedScore(struct PairwiseAlignmentResult *par);
 
 /********************************************************/
 /* Main Function to calculate Single Pairwise alignment */
@@ -75,22 +74,29 @@ int singlePairwise(struct UserParameters *ptrUserParams) {
 	// Checks the Query
 	invalidLettersQuery = toUpperCodeAndCheck(	&(globalData.query),
 												globalData.scoreMatrix.horizontalAlphabet,
-												globalData.scoreMatrix.horizontalCodification
+												globalData.scoreMatrix.horizontalCodification,
+												globalData.scoreMatrix.matrix
 											 );
 	if (invalidLettersQuery != 0) fprintf(stderr, "Query has %d letters not found in the alphabet.\n", invalidLettersQuery);
 
 	// Checks the subject
 	invalidLettersSubject = toUpperCodeAndCheck(&(globalData.subject),
 												globalData.scoreMatrix.verticalAlphabet,
-												globalData.scoreMatrix.verticalCodification
+												globalData.scoreMatrix.verticalCodification,
+												globalData.scoreMatrix.matrix
 											   );
 	if (invalidLettersSubject != 0) fprintf(stderr, "Subject has %d letters not found in the alphabet.\n", invalidLettersSubject);
 
 	/***********************************/
 	/* MAIN CALL TO PAIRWISE ALIGNMENT */
 	/***********************************/
-	int score = executePairwise(&globalData);
-	fprintf(stdout, "The score is: %d\n", score);
+	struct PairwiseAlignmentResult pairAlignResult = executePairwise(&globalData);
+	fprintf(stdout, "The score is: %d\n", pairAlignResult.score);
+	fprintf(stdout, "The distance is: %5.2f%%\n", pairAlignResult.normalizedScore*100.0);
+	if (globalData.pass == FULL_ALIGNMENT) {
+		saveFastaPairwiseAlignment(ptrUserParams->alignFilename, &pairAlignResult.fastaPairwiseAlignment);
+	}
+	freeFastaPairwiseAlignmentStruct(&pairAlignResult.fastaPairwiseAlignment);
 	/***********************************/
 	/***********************************/
 
@@ -104,7 +110,9 @@ int singlePairwise(struct UserParameters *ptrUserParams) {
 /* AUXILIARY FUNCTION TO PERFORM ONE PAIRWISE ALIGNMENT */
 /*    This is called from Single and Multi pairwise     */
 //
-int executePairwise(struct GlobalData *gd) {
+struct PairwiseAlignmentResult executePairwise(struct GlobalData *gd) {
+	struct PairwiseAlignmentResult ret;
+#ifndef KNC
 	/* CHECKS SUPPORT FOR VECTORIZATION */
 	enum Vectorization userParamVectorization = gd->vectorization;
 	checkSupport(gd);
@@ -113,6 +121,7 @@ int executePairwise(struct GlobalData *gd) {
 	else
 		gd->vectorization = userParamVectorization;
 	if (gd->verbose) { fprintf(stdout, "Using vectorization: %s.\n", enumVectorizationToString(gd->vectorization)); }
+#endif
 	/* ESTIMATES THE FRAGMENTS SIZE AND CREATES THE TABLE OF JOBS */
 	createJobTable(gd);
 	/* INITIALIZES THE STACK OF JOBS */
@@ -163,21 +172,52 @@ int executePairwise(struct GlobalData *gd) {
 		if (gd->verbose)
 			fprintf(stdout, "Time execution: %.3f\n", (float)(endTime-initTime)/1000);
 
+		// PREPARE DATA TO RETURN
+		ret.score = gd->bestScore;
 		if (gd->pass == FULL_ALIGNMENT) {
 			initTime = myClock();
-			struct FastaPairwiseAlignment pairAlign = getFastaAlignment(gd);
+			ret.fastaPairwiseAlignment = getFastaAlignment(gd);
+			computeNormalizedScore(&ret);
 			endTime = myClock();
 			if (gd->verbose)
 				fprintf(stdout, "Time execution of backwards stage: %.3f\n", (float)(endTime-initTime)/1000);
-//			fprintf(stdout, "%s\n", pairAlign.sequence[0]->name);
-//			fprintf(stdout, "%s\n", pairAlign.alignment[0]);
-//			fprintf(stdout, "%s\n", pairAlign.sequence[1]->name);
-//			fprintf(stdout, "%s\n", pairAlign.alignment[1]);
+		} else { // if (gd->pass == ONLY_SCORE)
+			// No alignment is returned
+			ret.fastaPairwiseAlignment.alignment[0] = ret.fastaPairwiseAlignment.alignment[1] = NULL;
+			ret.fastaPairwiseAlignment.sequence[0] = ret.fastaPairwiseAlignment.sequence[1] = NULL;
+			// Calculate normalized score in a different way. We only have the real score and not the whole alignment
+			int lengthSeq_Query = strlen(gd->query.data);
+			int lengthSeq_Subject = strlen(gd->subject.data);
+			int auxScore;
+			if (lengthSeq_Query < lengthSeq_Subject) { // Let's assume insertions
+				auxScore = gd->subject.againstItselfScore - gd->insert - gd->gapExtend * (lengthSeq_Subject - lengthSeq_Query);
+			} else if (lengthSeq_Subject < lengthSeq_Query) { // Let's assume deletions
+				auxScore = gd->query.againstItselfScore - gd->delete - gd->gapExtend * (lengthSeq_Query - lengthSeq_Subject);
+			} else { // Same length
+				auxScore = min(gd->query.againstItselfScore, gd->subject.againstItselfScore);
+			}
+			ret.normalizedScore = 1.0 - (double) ret.score / (double) auxScore;
 		}
-
 	/* RELEASE MEMORY */
 	freeStack(&gd->stackOfJobs);
 	freeJobTableStruct(&gd->jobTable, gd->pass);
-	return gd->bestScore;
+	return ret;
+}
+
+// Once calculated a full alignment and a score, normalizes the score:
+// Calculates how many residues match completely in the alignment: countMatches
+// similarity = countMatches / MIN (length of the two compared sequences)
+// distance = 1.0 - similarity;
+// This is the method used by ClustalW.
+void computeNormalizedScore(struct PairwiseAlignmentResult *par) {
+	int countMatches = 0;
+	int pos = 0;
+	while(par->fastaPairwiseAlignment.alignment[0][pos] != '\0') { // Both ...alignment[0] and ...alignment[1] have the same length.
+		if (par->fastaPairwiseAlignment.alignment[0][pos] == par->fastaPairwiseAlignment.alignment[1][pos])
+			countMatches++;
+		pos++;
+	};
+	double similarity = (double) countMatches / (double) (min(strlen(par->fastaPairwiseAlignment.sequence[0]->data), strlen(par->fastaPairwiseAlignment.sequence[1]->data)));
+	par->normalizedScore = 1.0 - similarity;
 }
 

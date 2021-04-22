@@ -19,9 +19,9 @@ struct Stack {
 };
 
 struct Stack createStack(struct GlobalData *gd, unsigned size);
-unsigned volatile isEmptyStack(struct Stack *ptrStack);
+unsigned isEmptyStack(struct Stack *ptrStack);
 void push(struct Stack *ptrStack, struct Job *job);
-struct Job * volatile pop(struct Stack *ptrStack);
+struct Job * pop(struct Stack *ptrStack);
 void freeStack(struct Stack *ptrStack);
 
 #endif /* STACK_H_ */

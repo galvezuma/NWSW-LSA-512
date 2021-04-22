@@ -17,5 +17,6 @@ struct FastaPairwiseAlignment {
 };
 
 struct FastaPairwiseAlignment getFastaAlignment(struct GlobalData * globalData);
+void freeFastaPairwiseAlignmentStruct(struct FastaPairwiseAlignment *pairAlign);
 
 #endif /* BACKWARDSPAIRWISE_H_ */

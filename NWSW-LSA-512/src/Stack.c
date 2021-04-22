@@ -25,7 +25,7 @@ struct Stack createStack(struct GlobalData *gd, unsigned size) {
 	return ret;
 }
 
-unsigned volatile isEmptyStack(struct Stack *ptrStack) {
+unsigned isEmptyStack(struct Stack *ptrStack) {
 	return ptrStack->size == 0;
 }
 
@@ -43,7 +43,7 @@ void push(struct Stack *ptrStack, struct Job *job) {
 //	printf("\tInserting job=(%d,%d) ID=%d; Size=%d\n", ptrStack->ptrArray[ptrStack->size-1]->x, ptrStack->ptrArray[ptrStack->size-1]->y, id, ptrStack->size);
 }
 
-struct Job * volatile pop(struct Stack *ptrStack) {
+struct Job * pop(struct Stack *ptrStack) {
 	if (isEmptyStack(ptrStack )) fatalError0("Stack of jobs underflow\n");
 	ptrStack->size--;
 //	pid_t id = syscall(__NR_gettid);

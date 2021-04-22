@@ -8,6 +8,6 @@
 #ifndef NJ_MAINNJ_H_
 #define NJ_MAINNJ_H_
 
-int mainNJ(int numSequences, int *ptrArray, char **arraySpeciesName, int verbose );
+int mainNJ(int numSequences, double *ptrArray, char **arraySpeciesName, int verbose, char *filename);
 
 #endif /* NJ_MAINNJ_H_ */

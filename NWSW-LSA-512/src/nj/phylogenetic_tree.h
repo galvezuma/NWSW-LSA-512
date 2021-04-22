@@ -50,6 +50,7 @@ uint32_t btree_get_height(btree_node *root);
 
 void btree_print_tree(btree_node *root);
 void btree_print_trees(btree_node **trees, uint32_t tree_count);
+void exportToNewick(char *filename, btree_node *root);
 
 
 #endif /* NJ_PHYLOGENETIC_TREE_H_ */

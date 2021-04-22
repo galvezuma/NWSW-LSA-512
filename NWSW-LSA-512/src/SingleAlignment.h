@@ -10,8 +10,15 @@
 
 #include "NWSW-LSA-512.h"
 #include "GlobalData.h"
+#include "BackwardsPairwise.h"
+
+struct PairwiseAlignmentResult {
+	struct FastaPairwiseAlignment fastaPairwiseAlignment;
+	int score;
+	double normalizedScore;
+};
 
 int singlePairwise(struct UserParameters *ptrUserParams);
-int executePairwise(struct GlobalData *gd);
+struct PairwiseAlignmentResult executePairwise(struct GlobalData *gd);
 
 #endif /* SINGLEALIGNMENT_H_ */

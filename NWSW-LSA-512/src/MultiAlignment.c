@@ -38,6 +38,7 @@ struct AlignerSynchronization {
 	int numSequences; // This is to access exact positions in the square array 'scores'
 	int scoreSize;
 	int * scores;
+	double * normalizedScores;
 	struct {
 		struct AlignerParam volatile * ptrArray; // Maximum size is the number of parallel aligners
 		int volatile top;
@@ -103,7 +104,8 @@ int multiplePairwise(struct UserParameters *ptrUserParams) {
 		// Checks the Query
 		numInvalidLettersInSequence = toUpperCodeAndCheck(	&ptr->sequence,
 													globalData.scoreMatrix.horizontalAlphabet,
-													globalData.scoreMatrix.horizontalCodification
+													globalData.scoreMatrix.horizontalCodification,
+													globalData.scoreMatrix.matrix
 												 );
 		if (numInvalidLettersInSequence != 0) fprintf(stderr, "Sequence %d has %d letters not found in the alphabet.\n", i, numInvalidLettersInSequence);
 	}
@@ -149,7 +151,7 @@ int multiplePairwise(struct UserParameters *ptrUserParams) {
 		for (int j = 0; j < as.numSequences - 1; j++) {
 			fprintf(stdout, "(%d)", j+1);
 			for (int i = 0; i <= j ; i++)
-				fprintf(stdout, "\t%d", as.scores[i * (as.numSequences - 1) + j]);
+				fprintf(stdout, "\t%.3f", as.normalizedScores[i * (as.numSequences - 1) + j]);
 			fprintf(stdout, "\n");
 		}
 	}
@@ -159,18 +161,8 @@ int multiplePairwise(struct UserParameters *ptrUserParams) {
 		int i = 0;
 		for (struct NodeListSequence *ptr = ptrNodesFasta; ptr != NULL; ptr = ptr->ptrNext, i++)
 			arraySpeciesName[i] = ptr->sequence.name;
-		// We convert scores into positive distances
-		int maxScore = -INFINITE;
-		// Calculate maximum value
-		for (int j = 0; j < as.numSequences - 1; j++)
-			for (int i = 0; i <= j ; i++)
-				maxScore = max(maxScore, as.scores[i * (as.numSequences - 1) + j]);
-		// Replace scores by positive distances
-		for (int j = 0; j < as.numSequences - 1; j++)
-			for (int i = 0; i <= j ; i++)
-				as.scores[j * (as.numSequences - 1) + i] = as.scores[i * (as.numSequences - 1) + j] = maxScore - as.scores[i * (as.numSequences - 1) + j];
-		//
-		mainNJ(as.numSequences, as.scores, arraySpeciesName, ptrUserParams->verbose);
+		// Actually, normalizedScores are distances
+		mainNJ(as.numSequences, as.normalizedScores, arraySpeciesName, ptrUserParams->verbose, ptrUserParams->newickFilename);
 	}
 
 	/* RELEASE MEMORY */
@@ -199,6 +191,7 @@ void initializeAlignerSynchronization(struct AlignerSynchronization *as, struct 
 	// PREPARE STRUCTURE TO STORE SCORES
 	as->scoreSize = numSequences-1;
 	as->scores = (int *) internalMalloc(sizeof(int)*(numSequences-1)*(numSequences-1));
+	as->normalizedScores = (double *) internalMalloc(sizeof(double)*(numSequences-1)*(numSequences-1));
 	as->stack.ptrArray = (struct AlignerParam *) internalMalloc(sizeof(struct AlignerParam) * as->numAligners);
 	as->stack.top = 0;
 	as->noMoreAlignments = 0;
@@ -215,6 +208,7 @@ void freeAlignerSynchronization(struct AlignerSynchronization *as) {
 	error = pthread_mutex_destroy(&as->alignerSynchronizationAccess_mutex);
 	if (error) fatalError0("Unable to destroy the aligner's mutex.\n");
 	// Frees allocated memory
+	internalFree((void **) &as->normalizedScores);
 	internalFree((void **) &as->scores);
 	internalFree((void **) &as->stack.ptrArray);
 }
@@ -263,10 +257,14 @@ void * threadAligner(void * arg) {
 					struct GlobalData gd = as->stack.ptrArray[as->stack.top].globalData; // Copy by value
 					pthread_cond_broadcast(&as->stackNotFull_condition);
 				pthread_mutex_unlock(&as->alignerSynchronizationAccess_mutex);
-				int score = executePairwise(&gd); // Executed out of locks
+				struct PairwiseAlignmentResult pairAlignResult = executePairwise(&gd); // Executed out of locks
+				int score = pairAlignResult.score;
+				double normalizedScore = pairAlignResult.normalizedScore;
+				freeFastaPairwiseAlignmentStruct(&pairAlignResult.fastaPairwiseAlignment);
 				pthread_mutex_lock(&as->alignerSynchronizationAccess_mutex);
 				as->scores[i * (as->numSequences - 1) + j] = as->scores[j * (as->numSequences - 1) + i] = score;
-				fprintf(stdout, "The score %dx%d is: %d\n", i, j, score);
+				as->normalizedScores[i * (as->numSequences - 1) + j] = as->normalizedScores[j * (as->numSequences - 1) + i] = normalizedScore;
+				fprintf(stdout, "The score %dx%d is: %d (%5.2f%%)\n", i, j, score, normalizedScore * 100);
 			} else {
 				finished = 1;
 			}

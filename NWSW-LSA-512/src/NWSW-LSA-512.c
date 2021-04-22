@@ -35,9 +35,11 @@ void printHelp() {
 	printf("*** Options:\n");
 	printf("[%s]            \t Displays this helping information and exits.\n", __HELP);
 	printf("[%s | %s] \t Calculates only the score (%s) or the full alignment (%s).\n\t\t\t If %s then a file align.fa must be indicated. Default %s.\n", __1PASS, __2PASS, __1PASS, __2PASS, __2PASS, enumPassToString(DEFAULT_PASS));
-	printf("[%s | %s] \t Performs many to many pairwise alignments and produces a Newick tree.\n\t\t\t This overrides [%s | %s] option.\n", __NJ, __UPGMA, __1PASS, __2PASS);
-	printf("[%s | %s]\t Calculates NW (%s) or SW (%s). Both with affine gaps. Default %s\n", __GLOBAL, __LOCAL, __GLOBAL, __LOCAL, enumAlgorithmToString(DEFAULT_ALGORITHM));
-	printf("[%s|%s|%s|%s]\t Calulates the alignment by vectorization using vectors of the specified length. Default %s.\n", __CISC, __128, __256, __512, DEFAULT_VECTORIZATION);
+	printf("[%s | %s] \t Performs many to many pairwise alignments and produces a Newick tree.\n", __NJ, __UPGMA);
+	printf("[%s | %s]\t Calculates NW (%s) or SW (%s). Both with affine gaps. Default %s.\n", __GLOBAL, __LOCAL, __GLOBAL, __LOCAL, enumAlgorithmToString(DEFAULT_ALGORITHM));
+#ifndef KNC
+	printf("[%s|%s|\n%s|%s]\t\t Calulates the alignment by vectorization using vectors of the specified length. Default %s.\n", __CISC, __128, __256, __512, enumVectorizationToString(DEFAULT_VECTORIZATION));
+#endif
 //	printf("[%s | %s]\t Provides a file with basic info on execution or with extended information (%s). Default %s\n", __EXTENDED, __BASIC, __EXTENDED, enumInfoToString(DEFAULT_INFO));
 	printf("[%s=value]    \t Cost value for open gap in the query sequence. By default %d.\n", __INSERT, DEFAULT_INSERT_COST);
 	printf("[%s=value]    \t Cost value for open gap in the subject sequence. By default %d.\n", __DELETE, DEFAULT_DELETE_COST);
@@ -91,6 +93,7 @@ int main(int argc, char *argv[]) {
 			userParams.algorithm = NEEDLEMAN_WUNSCH; pos++;
 		} else if(! strcmp(__LOCAL, argv[pos]) ) {
 			userParams.algorithm = SMITH_WATERMAN; pos++;
+#ifndef KNC
 		} else if (! strcmp(__CISC, argv[pos]) ) {
 			userParams.vectorization = CISC; pos++;
 		} else if (! strcmp(__128, argv[pos]) ) {
@@ -99,6 +102,7 @@ int main(int argc, char *argv[]) {
 			userParams.vectorization = AVX2; pos++;
 		} else if (! strcmp(__512, argv[pos]) ) {
 			userParams.vectorization = AVX512; pos++;
+#endif
 //		} else if(! strcmp(__EXTENDED, argv[pos]) ) {
 //			userParams.info = EXTENDED; pos++;
 //		} else if(! strcmp(__BASIC, argv[pos]) ) {
@@ -202,7 +206,6 @@ int main(int argc, char *argv[]) {
 	if (userParams.tree == NONE_TREE) {
 		return singlePairwise(&userParams);
 	} else {
-		userParams.pass = ONLY_SCORE;
 		return multiplePairwise(&userParams);
 	}
 }

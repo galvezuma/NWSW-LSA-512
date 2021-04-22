@@ -15,7 +15,7 @@
  * In addition, checks how many of the letters in the sequence (once in uppercase)
  * are not in the alphabet. Returns such a number.
  */
-int toUpperCodeAndCheck(struct Sequence *seq, char *alphabet, uint8_t *codification) {
+int toUpperCodeAndCheck(struct Sequence *seq, char *alphabet, uint8_t *codification, int **matrix) {
 	// Auxiliar array to check quickly if a letter is valid or not.
 	uint8_t validLetters[MAX_LENGTH_ALPHABET];
 	memset(validLetters, 0, sizeof(validLetters)); // Sets to FALSE
@@ -33,13 +33,16 @@ int toUpperCodeAndCheck(struct Sequence *seq, char *alphabet, uint8_t *codificat
 		// 1.- Put each letter into Uppercase
 		// 2.- Populate the dataCoded with the index
 		// 3.- Check if the letter is valid (in the alphabet) or not
+		// Calculate best score against itself
 		int countInvalidLetters = 0;
+		seq->againstItselfScore = 0;
 		int const strlenSeqData = strlen(seq->data);
 		for (int i=0; i<strlenSeqData; i++) {
 			seq->data[i] = toupper(seq->data[i]);
 			seq->dataCoded[i] = codification[seq->data[i]];
 			if (! validLetters[seq->data[i]])
 				countInvalidLetters++;
+			seq->againstItselfScore += matrix[seq->dataCoded[i]][seq->dataCoded[i]];
 		}
 	#pragma GCC diagnostic pop
 	return countInvalidLetters;

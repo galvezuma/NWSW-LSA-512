@@ -30,7 +30,7 @@ void copyUserParameters(struct GlobalData *gd, struct UserParameters *up) {
 
 /* Function of synchronization */
 // Waits until a new job is available to be processed
-struct Job * volatile waitForAvailableJob(struct GlobalData *gd) {
+struct Job * waitForAvailableJob(struct GlobalData *gd) {
 	struct Job * volatile ret = NULL;
     pthread_mutex_lock(&gd->globalDataAccess_mutex);
         while(isEmptyStack(&gd->stackOfJobs) && ! gd->jobTableFulfilled)

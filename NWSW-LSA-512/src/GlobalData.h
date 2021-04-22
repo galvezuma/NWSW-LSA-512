@@ -71,7 +71,7 @@ struct GlobalData {
 };
 
 void copyUserParameters(struct GlobalData *gd, struct UserParameters *up);
-struct Job * volatile waitForAvailableJob(struct GlobalData *gd);
+struct Job * waitForAvailableJob(struct GlobalData *gd);
 void informFinishedJob(struct GlobalData *gd, unsigned x, unsigned y, struct Node *resultingFragmentX, struct Node *resultingFragmentY);
 void saveMyBestScore(struct GlobalData *gd, int score, struct Job *bestJob);
 void checkSupport(struct GlobalData *gd);

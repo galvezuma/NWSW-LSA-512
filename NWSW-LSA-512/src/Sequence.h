@@ -17,6 +17,7 @@ struct Sequence {
 	char name[MAX_SIZEHEADER]; // Header of the file.
 	char * data; // Content of the file, i.e., sequence of consecutive nucleotides
 	uint8_t *dataCoded; // Translation of the letters in the file into positions in an alphabet
+	int againstItselfScore;
 };
 
 struct NodeListSequence {
@@ -24,7 +25,7 @@ struct NodeListSequence {
 	struct NodeListSequence * ptrNext;
 };
 
-int toUpperCodeAndCheck(struct Sequence *seq, char *alphabet, uint8_t *codification);
+int toUpperCodeAndCheck(struct Sequence *seq, char *alphabet, uint8_t *codification, int **matrix);
 void freeSequenceStruct(struct Sequence *seq);
 
 #endif /* SEQUENCE_H_ */

@@ -124,6 +124,22 @@ struct NodeListSequence * readMultipleFastaFile(char* filename) {
 	return ret;
 }
 
+// Saves a pairwise alignment result in text Fasta format
+//
+void saveFastaPairwiseAlignment(char *filename, struct FastaPairwiseAlignment *fpa) {
+	FILE *file;
+	if((file = fopen(filename, "wt")) == NULL) {
+    	fatalError1("Unable to open the output Fasta alignment file: %s\n", filename); // This HALTS
+  	}
+	// Saves one aligned sequence after the other
+	fprintf(file, "%s\n", fpa->sequence[0]->name);
+	fprintf(file, "%s\n", fpa->alignment[0]);
+	fprintf(file, "%s\n", fpa->sequence[1]->name);
+	fprintf(file, "%s\n", fpa->alignment[1]);
+	//
+	fclose(file);
+}
+
 // Frees the memory allocated for a list of nodes of sequences
 // Implementation is recursive
 void freeNodeListSequenceStruct(struct NodeListSequence **ptrList) {
