@@ -2,7 +2,6 @@
  * neighbour_joining.c
  *
  *  Created on: Apr 7, 2021
- *      Author: galvez
  */
 
 #include <assert.h>
@@ -10,8 +9,8 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "dist_matrix.h"
-#include "phylogenetic_tree.h"
+#include "../clustering/dist_matrix.h"
+#include "../clustering/phylogenetic_tree.h"
 
 void nj_find_nearest_clusters(const dist_matrix *dmat, const double u[], uint32_t *c1, uint32_t *c2) {
     assert(dmat->species_count >= 2);

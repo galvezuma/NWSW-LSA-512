@@ -5,14 +5,14 @@
  *      Author: galvez
  */
 
-#include "dist_matrix.h"
-#include "utilities.h"
+#include "../clustering/dist_matrix.h"
 
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+#include "../clustering/utilities.h"
 
 size_t dist_matrix_size(uint32_t species_count) {
     size_t matrix_size = species_count * (species_count - 1) / 2;

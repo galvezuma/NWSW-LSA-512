@@ -5,8 +5,8 @@
  *      Author: galvez
  */
 
-#ifndef NJ_DIST_MATRIX_H_
-#define NJ_DIST_MATRIX_H_
+#ifndef CLUSTERING_DIST_MATRIX_H_
+#define CLUSTERING_DIST_MATRIX_H_
 
 #include <stdint.h>
 #include <stddef.h>
@@ -52,4 +52,4 @@ void dist_matrix_compute_avg_distances(const dist_matrix *dmat, double distances
 void dist_matrix_print(const dist_matrix *dmat);
 
 
-#endif /* NJ_DIST_MATRIX_H_ */
+#endif /* CLUSTERING_DIST_MATRIX_H_ */

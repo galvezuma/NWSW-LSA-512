@@ -5,7 +5,7 @@
  *      Author: galvez
  */
 
-#include "utilities.h"
+#include "../clustering/utilities.h"
 
 #include <ctype.h>
 #include <string.h>

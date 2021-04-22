@@ -10,13 +10,14 @@
 
 #include "SingleAlignment.h"
 #include "MultiAlignment.h"
+
+#include "clustering/mainClustering.h"
 #include "Utilities.h"
 #include "NWSW-LSA-512.h"
 #include "GlobalData.h"
 #include "ScoreMatrix.h"
 #include "Fasta.h"
 #include "Worker.h"
-#include "nj/mainNJ.h"
 
 struct AlignerParam {
 	int x, y; // Positions to set in the score array.
@@ -156,13 +157,16 @@ int multiplePairwise(struct UserParameters *ptrUserParams) {
 		}
 	}
 
+	// Calculate Newick tree
+	char * arraySpeciesName[as.numSequences];
+	int pos = 0;
+	for (struct NodeListSequence *ptr = ptrNodesFasta; ptr != NULL; ptr = ptr->ptrNext, pos++)
+		arraySpeciesName[pos] = ptr->sequence.name;
+	// Actually, normalizedScores are distances
 	if (ptrUserParams->tree == NEIGHBOUR_JOIN) {
-		char * arraySpeciesName[as.numSequences];
-		int i = 0;
-		for (struct NodeListSequence *ptr = ptrNodesFasta; ptr != NULL; ptr = ptr->ptrNext, i++)
-			arraySpeciesName[i] = ptr->sequence.name;
-		// Actually, normalizedScores are distances
 		mainNJ(as.numSequences, as.normalizedScores, arraySpeciesName, ptrUserParams->verbose, ptrUserParams->newickFilename);
+	} else { // ptrUserParams->tree == UPGMA
+		mainUPGMA(as.numSequences, as.normalizedScores, arraySpeciesName, ptrUserParams->verbose, ptrUserParams->newickFilename);
 	}
 
 	/* RELEASE MEMORY */

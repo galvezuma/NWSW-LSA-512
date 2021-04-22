@@ -2,11 +2,10 @@
  * phylogenetic_tree.h
  *
  *  Created on: Apr 7, 2021
- *      Author: galvez
  */
 
-#ifndef NJ_PHYLOGENETIC_TREE_H_
-#define NJ_PHYLOGENETIC_TREE_H_
+#ifndef CLUSTERING_PHYLOGENETIC_TREE_H_
+#define CLUSTERING_PHYLOGENETIC_TREE_H_
 
 #include <stdio.h>
 #include <stdint.h>
@@ -53,4 +52,4 @@ void btree_print_trees(btree_node **trees, uint32_t tree_count);
 void exportToNewick(char *filename, btree_node *root);
 
 
-#endif /* NJ_PHYLOGENETIC_TREE_H_ */
+#endif /* CLUSTERING_PHYLOGENETIC_TREE_H_ */

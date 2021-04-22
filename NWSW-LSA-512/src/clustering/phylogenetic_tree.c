@@ -5,14 +5,15 @@
  *      Author: galvez
  */
 
-#include "phylogenetic_tree.h"
-#include "utilities.h"
+#include "../clustering/phylogenetic_tree.h"
+
 #include "../Utilities.h"
 
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include "../clustering/utilities.h"
 
 size_t btree_storage_size(uint32_t nodes_count) {
     return sizeof(btree_storage) + (nodes_count * member_size(btree_storage, nodes[0]));
