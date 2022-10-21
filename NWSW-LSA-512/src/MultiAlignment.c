@@ -90,7 +90,7 @@ int multiplePairwise(struct UserParameters *ptrUserParams) {
 		fprintf(stdout, "****** INPUT SEQUENCES ******\n");
 		int i = 0;
 		for (struct NodeListSequence *ptr = ptrNodesFasta; ptr != NULL; ptr = ptr->ptrNext)
-			fprintf(stdout, "Sequence %d (%ld nt): %s\n", i++, strlen(ptr->sequence.data), ptr->sequence.name);
+			fprintf(stdout, "Sequence %d (%zu nt): %s\n", i++, strlen(ptr->sequence.data), ptr->sequence.name);
 		fprintf(stdout, "****** SCORE MATRIX ******\n");
 		// Display matrix content
 		displayScoreMatrix(stdout, &(globalData.scoreMatrix));

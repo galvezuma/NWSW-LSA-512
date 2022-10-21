@@ -11,6 +11,7 @@
 
 #include "../clustering/dist_matrix.h"
 #include "../clustering/phylogenetic_tree.h"
+#include "../clustering/neighbour_joining.h"
 
 void nj_find_nearest_clusters(const dist_matrix *dmat, const double u[], uint32_t *c1, uint32_t *c2) {
     assert(dmat->species_count >= 2);

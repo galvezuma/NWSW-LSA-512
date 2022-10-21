@@ -37,10 +37,15 @@ void printHelp() {
 	printf("[%s | %s] \t Calculates only the score (%s) or the full alignment (%s).\n\t\t\t If %s then a file align.fa must be indicated. Default %s.\n", __1PASS, __2PASS, __1PASS, __2PASS, __2PASS, enumPassToString(DEFAULT_PASS));
 	printf("[%s | %s] \t Performs many to many pairwise alignments and produces a Newick tree.\n", __NJ, __UPGMA);
 	printf("[%s | %s]\t Calculates NW (%s) or SW (%s). Both with affine gaps. Default %s.\n", __GLOBAL, __LOCAL, __GLOBAL, __LOCAL, enumAlgorithmToString(DEFAULT_ALGORITHM));
-#ifndef KNC
+#if ! defined(KNC) && ! defined(ARM)
 	printf("[%s|%s|\n%s|%s]\t\t Calulates the alignment by vectorization using vectors of the specified length. Default %s.\n", __CISC, __128, __256, __512, enumVectorizationToString(DEFAULT_VECTORIZATION));
+#elif defined(KNC)
+	printf("[%s | %s]\t\t Calulates the alignment through vector or scalar values. Default %s.\n", __CISC, __KNC, __KNC);
+#elif defined(ARM)
+	printf("[%s | %s]\t\t Calulates the alignment through vector or scalar values. Default %s.\n", __CISC, __ARM, __ARM);
 #endif
 //	printf("[%s | %s]\t Provides a file with basic info on execution or with extended information (%s). Default %s\n", __EXTENDED, __BASIC, __EXTENDED, enumInfoToString(DEFAULT_INFO));
+	printf("[%s=value]\t Uses fragments of indicated size. Default %d\n", __FRAGMENTSIZE, DEFAULT_FRAGMENTSIZE);
 	printf("[%s=value]    \t Cost value for open gap in the query sequence. By default %d.\n", __INSERT, DEFAULT_INSERT_COST);
 	printf("[%s=value]    \t Cost value for open gap in the subject sequence. By default %d.\n", __DELETE, DEFAULT_DELETE_COST);
 	printf("[%s=value] \t Cost value when any nucleotide to compare is not in the score matrix. By default %d.\n", __MATCHREPLACE, DEFAULT_MATCHREPLACE_COST);
@@ -93,15 +98,21 @@ int main(int argc, char *argv[]) {
 			userParams.algorithm = NEEDLEMAN_WUNSCH; pos++;
 		} else if(! strcmp(__LOCAL, argv[pos]) ) {
 			userParams.algorithm = SMITH_WATERMAN; pos++;
-#ifndef KNC
 		} else if (! strcmp(__CISC, argv[pos]) ) {
 			userParams.vectorization = CISC; pos++;
+#if ! defined(KNC) && ! defined(ARM)
 		} else if (! strcmp(__128, argv[pos]) ) {
 			userParams.vectorization = SSE3; pos++;
 		} else if (! strcmp(__256, argv[pos]) ) {
 			userParams.vectorization = AVX2; pos++;
 		} else if (! strcmp(__512, argv[pos]) ) {
 			userParams.vectorization = AVX512; pos++;
+#elif defined(KNC)
+		} else if (! strcmp(__KNC, argv[pos]) ) {
+			userParams.vectorization = KNC_SET; pos++;
+#elif defined(ARM)
+		} else if (! strcmp(__ARM, argv[pos]) ) {
+			userParams.vectorization = ARM_SET; pos++;
 #endif
 //		} else if(! strcmp(__EXTENDED, argv[pos]) ) {
 //			userParams.info = EXTENDED; pos++;
@@ -109,6 +120,10 @@ int main(int argc, char *argv[]) {
 //			userParams.info = BASIC; pos++;
 		} else if(! strcmp(__VERBOSE, argv[pos]) ) {
 			userParams.verbose = 1; pos++;
+		} else if(startsWith(argv[pos], __FRAGMENTSIZE) ) {
+			userParams.fragmentSize = parseInt(afterEquals(argv[pos], __FRAGMENTSIZE), &goodValue);
+			if (!goodValue) { fprintf(stderr, "Unknown value in: %s\n", argv[pos]); ok = 0; }
+			pos++;
 		} else if(startsWith(argv[pos], __INSERT) ) {
 			userParams.insert = parseInt(afterEquals(argv[pos], __INSERT), &goodValue);
 			if (!goodValue) { fprintf(stderr, "Unknown value in: %s\n", argv[pos]); ok = 0; }
@@ -214,19 +229,26 @@ int main(int argc, char *argv[]) {
 /* Returns a structure with default parameters. Returns it by copy */
 struct UserParameters defaultUserParameters() {
 	struct UserParameters userParams;
-	userParams.pass 		= DEFAULT_PASS;
-	userParams.tree			= DEFAULT_TREE;
-	userParams.algorithm 	= DEFAULT_ALGORITHM;
-	userParams.vectorization= DEFAULT_VECTORIZATION;
-//	userParams.info 		= DEFAULT_INFO;
-	userParams.insert 		= DEFAULT_INSERT_COST;
-	userParams.delete  		= DEFAULT_DELETE_COST;
-	userParams.matchReplace = DEFAULT_MATCHREPLACE_COST;
-	userParams.gapExtend	= DEFAULT_GAPEXTEND_COST;
+	userParams.pass 		  = DEFAULT_PASS;
+	userParams.tree			  = DEFAULT_TREE;
+	userParams.algorithm 	  = DEFAULT_ALGORITHM;
+#if ! defined(KNC) && ! defined(ARM)
+	userParams.vectorization  = DEFAULT_VECTORIZATION;
+#elif defined(KNC)
+	userParams.vectorization  = KNC_SET;
+#elif defined(ARM)
+	userParams.vectorization  = ARM_SET;
+#endif
+	userParams.fragmentSize   = DEFAULT_FRAGMENTSIZE;
+//	userParams.info 		  = DEFAULT_INFO;
+	userParams.insert 		  = DEFAULT_INSERT_COST;
+	userParams.delete  		  = DEFAULT_DELETE_COST;
+	userParams.matchReplace   = DEFAULT_MATCHREPLACE_COST;
+	userParams.gapExtend	  = DEFAULT_GAPEXTEND_COST;
 	strcpy(userParams.matrixFilename, "");
-	userParams.threads 		= DEFAULT_THREADS;
-	userParams.parallel		= DEFAULT_PARALLEL;
-	userParams.verbose		= DEFAULT_VERBOSE;
+	userParams.threads 		  = DEFAULT_THREADS;
+	userParams.parallel		  = DEFAULT_PARALLEL;
+	userParams.verbose		  = DEFAULT_VERBOSE;
 	//userParams.queryFilename			// No default. Mandatory
 	//userParams.subjectFilename			// No default. Mandatory
 	//userParams.infoFilename				// No default. Removed
@@ -243,6 +265,7 @@ void displayUserParameters(struct UserParameters * ptrUserParams, FILE * out) {
 		fprintf(out, "Guide tree: %s\n", enumTreeToString(ptrUserParams->tree));
 	fprintf(out, "Algorithm: %s\n", enumAlgorithmToString(ptrUserParams->algorithm));
 	fprintf(out, "Vectorization: %s\n", enumVectorizationToString(ptrUserParams->vectorization));
+	fprintf(out, "Fragment size: %d\n", ptrUserParams->fragmentSize);
 //	fprintf(out, "Output info: %s\n", enumInfoToString(ptrUserParams->info));
 	fprintf(out, "Insert: %d\n", ptrUserParams->insert);
 	fprintf(out, "Delete: %d\n", ptrUserParams->delete);

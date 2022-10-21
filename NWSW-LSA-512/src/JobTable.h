@@ -12,8 +12,8 @@
 struct GlobalData;
 
 /* Default values for fragments size. */
-#define DEFAULT_FRAGMENTSIZE_X 8*250
-#define DEFAULT_FRAGMENTSIZE_Y 8*250
+// #define DEFAULT_FRAGMENTSIZE_X 8*250
+// #define DEFAULT_FRAGMENTSIZE_Y 8*250
 
 struct Node {
 	int t; // End in horizontal gap

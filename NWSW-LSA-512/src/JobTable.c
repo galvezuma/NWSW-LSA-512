@@ -19,8 +19,8 @@ void initializeFragments(struct GlobalData *gd);
 /* Initializes the Job table stores inside a GlobalData struct */
 /* Initialization depends on the algorithm (NW or SW) and if the user wants only the score or the alignment too */
 void createJobTable(struct GlobalData *gd) {
-	gd->jobTable.fragmentSize_X = DEFAULT_FRAGMENTSIZE_X;
-	gd->jobTable.fragmentSize_Y = DEFAULT_FRAGMENTSIZE_Y;
+	gd->jobTable.fragmentSize_X = gd->fragmentSize_X; // DEFAULT_FRAGMENTSIZE_X;
+	gd->jobTable.fragmentSize_Y = gd->fragmentSize_Y; // DEFAULT_FRAGMENTSIZE_Y;
 	gd->jobTable.numFragments_X = ceilDivision(strlen(gd->query.data), gd->jobTable.fragmentSize_X);
 	gd->jobTable.numFragments_Y = ceilDivision(strlen(gd->subject.data), gd->jobTable.fragmentSize_Y);
 	allocateFragmentsAndJobs(gd);

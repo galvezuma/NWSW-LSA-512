@@ -62,8 +62,8 @@ int singlePairwise(struct UserParameters *ptrUserParams) {
 		fprintf(stdout, "nwsw_lsa v%.1f. Universidad de Málaga. Spain.\n", VERSION);
 		displayUserParameters(ptrUserParams, stdout);
 		fprintf(stdout, "****** INPUT SEQUENCES ******\n");
-		fprintf(stdout, "Query (%ld nt): %s\n", strlen(globalData.query.data), globalData.query.name);
-		fprintf(stdout, "Subject (%ld nt) %s\n", strlen(globalData.subject.data), globalData.subject.name);
+		fprintf(stdout, "Query (%zu nt): %s\n", strlen(globalData.query.data), globalData.query.name);
+		fprintf(stdout, "Subject (%zu nt) %s\n", strlen(globalData.subject.data), globalData.subject.name);
 		fprintf(stdout, "****** SCORE MATRIX ******\n");
 		displayScoreMatrix(stdout, &(globalData.scoreMatrix));
 	}
@@ -112,7 +112,7 @@ int singlePairwise(struct UserParameters *ptrUserParams) {
 //
 struct PairwiseAlignmentResult executePairwise(struct GlobalData *gd) {
 	struct PairwiseAlignmentResult ret;
-#ifndef KNC
+#if ! defined(KNC) && ! defined(ARM)
 	/* CHECKS SUPPORT FOR VECTORIZATION */
 	enum Vectorization userParamVectorization = gd->vectorization;
 	checkSupport(gd);
@@ -120,8 +120,8 @@ struct PairwiseAlignmentResult executePairwise(struct GlobalData *gd) {
 		fprintf(stdout, "%s not supported. Changing to %s.\n", enumVectorizationToString(userParamVectorization), enumVectorizationToString(gd->vectorization));
 	else
 		gd->vectorization = userParamVectorization;
-	if (gd->verbose) { fprintf(stdout, "Using vectorization: %s.\n", enumVectorizationToString(gd->vectorization)); }
 #endif
+	if (gd->verbose) { fprintf(stdout, "Using vectorization: %s.\n", enumVectorizationToString(gd->vectorization)); }
 	/* ESTIMATES THE FRAGMENTS SIZE AND CREATES THE TABLE OF JOBS */
 	createJobTable(gd);
 	/* INITIALIZES THE STACK OF JOBS */

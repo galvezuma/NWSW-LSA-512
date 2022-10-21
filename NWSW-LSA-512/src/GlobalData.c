@@ -9,6 +9,10 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <sys/syscall.h>
+#if defined(ARM)
+	#include <sys/auxv.h>
+	#include <asm/hwcap.h>
+#endif
 
 #include "GlobalData.h"
 #include "JobTable.h"
@@ -18,6 +22,8 @@ void copyUserParameters(struct GlobalData *gd, struct UserParameters *up) {
 	gd->tree = up->tree;
 	gd->algorithm = up->algorithm;
 	gd->vectorization = up->vectorization;
+	gd->fragmentSize_X = up->fragmentSize;
+	gd->fragmentSize_Y = up->fragmentSize;
 //	gd->info = up->info;
 	gd->insert = up->insert;
 	gd->delete = up->delete;
@@ -49,6 +55,8 @@ struct Job * waitForAvailableJob(struct GlobalData *gd) {
 void informFinishedJob(struct GlobalData *gd, unsigned x, unsigned y, struct Node *resultingFragmentX, struct Node *resultingFragmentY) {
 //    pthread_mutex_lock(&gd->globalDataAccess_mutex);
 //    fprintf(stdout, "Finishing job %d,%d\n", x, y);
+//    for(int i=0;i<8;i++)
+//    	fprintf(stdout, "[%d, %d, %d] - ", resultingFragmentX[i].t, resultingFragmentX[i].u, resultingFragmentX[i].s);
 //    pthread_mutex_unlock(&gd->globalDataAccess_mutex);
 	struct Job *jobDone = getJob(&gd->jobTable, x, y);
 	if (x == gd->jobTable.numFragments_X - 1 && y == gd->jobTable.numFragments_Y - 1) { // The just calculated  job is the last one (right-bottom corner)
@@ -116,6 +124,17 @@ void unblock(struct GlobalData *gd) {
 }
 
 void checkSupport(struct GlobalData *gd) {
+#if defined(ARM)
+	long hwcaps2 = getauxval(AT_HWCAP);
+    if(hwcaps2 & HWCAP_NEON){
+		gd->lengthVector = 4;
+		gd->vectorization = ARM_SET;
+		if (gd->verbose) fprintf(stdout, "NEON vectorization supported.\n");
+    } else {
+		gd->vectorization = CISC;
+		if (gd->verbose) fprintf(stdout, "No vectorization supported.\n");
+	}
+#else
 	if (__builtin_cpu_supports ("avx512f")) {
 		gd->lengthVector = 16;
 		gd->vectorization = AVX512;
@@ -132,4 +151,5 @@ void checkSupport(struct GlobalData *gd) {
 		gd->vectorization = CISC;
 		if (gd->verbose) fprintf(stdout, "No vectorization supported.\n");
 	}
+#endif
 }

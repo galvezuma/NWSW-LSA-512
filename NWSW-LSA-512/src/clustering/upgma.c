@@ -13,6 +13,7 @@
 #include "../clustering/dist_matrix.h"
 #include "../clustering/phylogenetic_tree.h"
 #include "../clustering/neighbour_joining.h"
+#include "../clustering/upgma.h"
 
 // See, e.g., https://www.sequentix.de/gelquest/help/upgma_method.htm
 //

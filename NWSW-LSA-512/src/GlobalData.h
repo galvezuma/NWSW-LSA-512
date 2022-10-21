@@ -34,6 +34,8 @@ struct GlobalData {
 	enum Tree tree;
 	enum Algorithm algorithm;
 	enum Vectorization vectorization;
+	int fragmentSize_X;
+	int fragmentSize_Y;
 //	enum Info info;
 	int32_t insert;
 	int32_t delete;

@@ -153,7 +153,7 @@ void freeNodeListSequenceStruct(struct NodeListSequence **ptrList) {
 void displayListSequence(struct NodeListSequence *list) {
 	while(list != NULL) {
 		fprintf(stdout, "Header: %s\n", list->sequence.name);
-		fprintf(stdout, "Content length: %ld: %s\n", strlen(list->sequence.data), list->sequence.data);
+		fprintf(stdout, "Content length: %zu: %s\n", strlen(list->sequence.data), list->sequence.data);
 		list = list->ptrNext;
 	}
 }
